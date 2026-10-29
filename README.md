@@ -1,19 +1,21 @@
-# SHOPEE FLOW 360
+# SHOPEE FLOW 360 · Shipping Diário
 
-Protótipo local de expedição para demonstração a gestores e líderes. Dados inteiramente fictícios. Não há backend, autenticação, telemetria ou conexão com sistemas internos. Não publicado.
+Centro de comando demonstrativo para acompanhar o plano de saídas e o caminho da carga: **balcão → conferência → transferência → doca → caminhão**. Identidade grafite/laranja, cenário 3D em corte, programação de saídas, alertas, previsto versus realizado e modo apresentação.
 
-## Executar no Windows
+Todos os dados são fictícios. Nenhum sistema ou documento interno foi conectado. O código está no GitHub; não há site hospedado ou backend. O estado reinicia ao recarregar.
 
-Requer Node.js 22.12+ ou 24 e npm. Abra um terminal nesta pasta e execute:
+## Abrir no PC
+
+Neste PC, as dependências já estão instaladas. Dê dois cliques em `INICIAR.cmd`, mantenha a janela aberta e acesse a URL exibida, normalmente http://127.0.0.1:5173. Encerre com Ctrl+C.
+
+Em outro computador, instale Node.js 22.12+ ou 24, baixe o repositório, abra um terminal na pasta e execute:
 
 ```powershell
 npm ci
 npm run dev
 ```
 
-Abra a URL local exibida (normalmente http://127.0.0.1:5173). O servidor aceita apenas conexões locais. Para encerrar, use Ctrl+C no terminal.
-
-## Verificar e gerar versão de apresentação
+O servidor atende apenas o próprio computador. Para validar e gerar uma versão compilada:
 
 ```powershell
 npm test
@@ -21,36 +23,54 @@ npm run build
 npm run preview
 ```
 
-O build fica em `dist/`. Abra pelo servidor de preview; clicar diretamente no index.html não executa corretamente os módulos. `package-lock.json` fixa as versões instaladas.
+O build fica em `dist/` e deve ser aberto por um servidor, não clicando diretamente no HTML. O arquivo `package-lock.json` fixa as versões das dependências.
 
-As dependências já estão instaladas neste PC. Para o próximo uso, dê dois cliques em `INICIAR.cmd` e abra a URL exibida. A janela precisa permanecer aberta durante a apresentação.
+## Roteiro de apresentação
 
-Verificação realizada em 29/10/2026: quatro testes automatizados aprovados, compilação TypeScript e build Vite concluídos, servidor local com HTTP 200. A ferramenta de controle do navegador não conseguiu anexar a visualização; aparência, interação no navegador e renderização WebGL ainda precisam de conferência manual no PC. Antes de apresentar, percorra o roteiro abaixo e confira também a câmera, seleção de docas e modo apresentação.
+1. Comece às 14h e mostre o plano de oito saídas, totalizando 6.400 volumes. A data 29/10/2026 identifica o dia demonstrativo, não dados reais de hoje.
+2. Selecione Campinas na linha das próximas saídas. A rota até a doca 02, a carga na lateral e a linha da tabela correspondem ao mesmo destino. Também é possível selecionar pelo 3D, pelos alertas ou pela tabela.
+3. Acompanhe as cinco etapas. Os volumes nos caminhões excluem cargas já expedidas; a soma das etapas sempre totaliza 6.400 volumes.
+4. Use **Priorizar no balcão** para atender o destino selecionado antes da ordem normal. A prioridade não aumenta a capacidade nem cria novos volumes.
+5. Use **Reter balcão por 20 min**. A conferência para, mas as docas continuam consumindo os volumes já separados. Use **Reter doca 04 por 60 min** para simular uma retenção no carregamento.
+6. Acelere até 10×. Um caminhão pronto aguarda seu horário; um caminhão incompleto permanece até concluir a carga e registra o atraso.
+7. Compare os três cenários em uma janela de 180 min, usando o mesmo plano e estoque inicial. Aplicar um cenário reinicia o turno e remove intervenções anteriores.
+8. Ative **Modo apresentação**. Esc sai; Espaço pausa quando o foco está no corpo da página. F11 pode ser usado manualmente para tela cheia do navegador.
 
-## Roteiro de demonstração
+## Regras do modelo
 
-1. Mostre os KPIs e as oito docas no cenário 3D. Arraste para girar, role para aproximar e selecione a doca 03.
-2. Pause e retome o relógio; acelere para 5× para observar caminhões saindo e retornando.
-3. Simule retenção. A doca 04 interrompe a carga durante 60 minutos simulados. Veja o registro na aba Eventos.
-4. Compare os três cenários em uma janela fixa de 120 minutos. Aplique Fluxo otimizado; o turno reinicia nas mesmas condições.
-5. Ative Modo apresentação. Esc sai; Espaço pausa quando o foco está no corpo da página.
+- Oito caminhões, cada um com uma carga de 800 volumes e um destino fixo. Não há reposição de caminhões após a saída neste turno.
+- Horários previstos, por doca: 15h40, 16h, 14h40, 15h20, 16h30, 16h05, 15h30 e 17h.
+- O estoque inicial de cada destino é distribuído entre balcão, doca e caminhão. Os totais por etapa são mutuamente exclusivos.
+- 1 segundo real equivale a 1 minuto simulado em 1×. O relógio para ao concluir as oito saídas.
+- O balcão atende os destinos por horário previsto, exceto uma prioridade manual ativa. Confere até 36 volumes/min no cenário atual, 56 no otimizado e 18 no sobrecarregado.
+- Um lote conferido leva 4 minutos simulados para chegar à doca. As caixas em movimento são representações de lotes; uma caixa 3D não equivale a um volume individual.
+- Cada doca carrega até `floor(taxa × 8 × (0,86 + doca × 0,035))` volumes/min, limitada ao estoque separado. Taxas: 0,65, 0,94 e 0,55 nos três cenários.
+- A saída exige carga completa, horário previsto atingido e ausência de retenção ativa. Saídas atrasadas são registradas uma única vez. O realizado é o horário efetivo de partida.
+- A estimativa conservadora soma espera de conferência/transporte e carregamento, respeitando o horário previsto e retenções. Como etapas reais da simulação se sobrepõem, ela pode sinalizar risco que se resolve antes do corte. Não é uma previsão validada.
+- Pontualidade mostra a porcentagem das saídas já realizadas que cumpriram o horário. Antes da primeira saída, é exibido “—”.
+- O histórico mantém os últimos 40 eventos. Prioridades, conferências concluídas, cortes perdidos e saídas geram registros.
 
-## Modelo e limites
+## Verificação
 
-1 segundo real corresponde a 1 minuto simulado na velocidade 1×. Cada carga contém 800 volumes. Progresso por minuto: taxa do cenário × (0,86 + número da doca × 0,035). As taxas base são 0,65% (atual), 0,94% (otimizado) e 0,55% (pico). O retorno de uma carga segue um intervalo modular de 14, 9 ou 6 minutos, respectivamente. São regras didáticas, não um modelo validado de capacidade.
+Em 29/10/2026: **12 testes automatizados aprovados**, TypeScript e build Vite concluídos, servidor local respondendo HTTP 200. A verificação cobre conservação de volumes em todos os cenários durante 600 min, transporte, retenções, prioridade, bloqueio sem estoque, horários, partidas únicas, imutabilidade e comparação determinística.
 
-Volumes e cargas são acumulados ao concluir cada carga. A ocupação conta docas carregando ou atrasadas. Tempo de ciclo é uma estimativa pela taxa base; não inclui fila, deslocamento ou conferência. A comparação é determinística e independente da simulação atual, sem retenções. O estado dura somente durante a sessão e reinicia ao recarregar.
+Resultados demonstrativos até 17h, sem intervenções manuais:
 
-Renderização 3D exige navegador com WebGL e aceleração de hardware. Em caso de falha, os cartões de docas e os controles mantêm o acesso aos dados. Câmera e movimentos são ilustrativos; não representam medidas reais do CD. O modo apresentação usa o espaço da aplicação, não exige tela cheia do navegador. Use F11 manualmente se desejar tela cheia.
+| Cenário | Volumes expedidos | Caminhões expedidos | Saídas no prazo |
+| --- | ---: | ---: | ---: |
+| Operação atual | 4.800 | 6 | 4 |
+| Fluxo otimizado | 6.400 | 8 | 7 |
+| Balcão sobrecarregado | 4.800 | 6 | 2 |
 
-## Organização e próximos passos
+A ferramenta de navegador está bloqueando a observação da página local; a aparência, interações no navegador e renderização WebGL desta versão precisam de conferência manual antes da apresentação. Use um navegador com aceleração de hardware. Sem 3D, os painéis e a tabela continuam oferecendo os dados e controles.
 
-- `src/Scene.tsx`: galpão, oito docas, caminhões animados, câmera e seleção.
-- `src/simulation.ts`: estado, eventos e projeções puras, sem dependência da interface.
-- `src/App.tsx`: KPIs, inspeção, cenários, eventos e apresentação.
-- `src/style.css`: identidade grafite/laranja, responsividade e integração Tailwind v4.
-- `src/simulation.test.ts`: invariantes, retenção, imutabilidade e comparação.
+## Arquivos principais
 
-Próximas etapas sugeridas: validar regras com responsáveis operacionais; testar acessibilidade e desempenho em equipamentos de apresentação; acrescentar séries históricas e entradas parametrizadas; definir critérios de segurança e obter aprovação antes de conectar dados internos ou publicar.
+- `src/ShippingDashboard.tsx`: programação, indicadores, comparação, inspeção e controles.
+- `src/shipping.ts`: regras puras de fluxo, estoque, cortes, prioridade e projeções.
+- `src/Scene.tsx`: balcão, esteiras, rotas, lotes, docas e caminhões.
+- `src/shipping.css`: identidade visual e layouts responsivos do Shipping Diário.
+- `src/simulation.test.ts`: testes do modelo integrado.
+- `src/App.tsx` e `src/simulation.ts`: pontos de entrada para o painel e o modelo.
 
-Referências técnicas: [Vite](https://vite.dev/guide/), [React Three Fiber](https://r3f.docs.pmnd.rs/getting-started/installation), [Tailwind com Vite](https://tailwindcss.com/docs/installation/using-vite).
+Próximas etapas: validar horários e regras com os responsáveis; conferir legibilidade e desempenho no equipamento de apresentação; definir dados, permissões e critérios de segurança antes de qualquer integração real ou publicação do site.
