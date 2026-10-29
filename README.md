@@ -1,6 +1,6 @@
 # SHOPEE FLOW 360 · Shipping Diário
 
-Centro de comando demonstrativo para acompanhar o plano de saídas e o caminho da carga: **balcão → conferência → transferência → doca → caminhão**. Identidade grafite/laranja, cenário 3D em corte, programação de saídas, alertas, previsto versus realizado e modo apresentação.
+Centro de comando demonstrativo para acompanhar o plano de saídas e o caminho da carga: **esteira → balcão → ruas (stage out) → caminhões → expedidos**. Identidade grafite/laranja, cenário 3D em corte, programação de saídas, alertas, previsto versus realizado e modo apresentação.
 
 Todos os dados são fictícios. Nenhum sistema ou documento interno foi conectado. O código está no GitHub; não há site hospedado ou backend. O estado reinicia ao recarregar.
 
@@ -28,8 +28,8 @@ O build fica em `dist/` e deve ser aberto por um servidor, não clicando diretam
 ## Roteiro de apresentação
 
 1. Comece às 14h e mostre o plano de oito saídas, totalizando 6.400 volumes. A data 29/10/2026 identifica o dia demonstrativo, não dados reais de hoje.
-2. Selecione Campinas na linha das próximas saídas. A rota até a doca 02, a carga na lateral e a linha da tabela correspondem ao mesmo destino. Também é possível selecionar pelo 3D, pelos alertas ou pela tabela.
-3. Acompanhe as cinco etapas. Os volumes nos caminhões excluem cargas já expedidas; a soma das etapas sempre totaliza 6.400 volumes.
+2. Selecione Campinas na linha das próximas saídas. A rua 02 do stage out e a rota até a doca 02, a carga na lateral e a linha da tabela correspondem ao mesmo destino. Também é possível selecionar pelo 3D, pelos alertas ou pela tabela.
+3. Acompanhe as cinco etapas: esteira, balcão, ruas, caminhões e expedidos. O indicador de ruas inclui lotes em transferência do balcão e os já separados no chão. Os volumes nos caminhões excluem cargas já expedidas; a soma das etapas sempre totaliza 6.400 volumes.
 4. Use **Priorizar no balcão** para atender o destino selecionado antes da ordem normal. A prioridade não aumenta a capacidade nem cria novos volumes.
 5. Use **Reter balcão por 20 min**. A conferência para, mas as docas continuam consumindo os volumes já separados. Use **Reter doca 04 por 60 min** para simular uma retenção no carregamento.
 6. Acelere até 10×. Um caminhão pronto aguarda seu horário; um caminhão incompleto permanece até concluir a carga e registra o atraso.
@@ -40,10 +40,11 @@ O build fica em `dist/` e deve ser aberto por um servidor, não clicando diretam
 
 - Oito caminhões, cada um com uma carga de 800 volumes e um destino fixo. Não há reposição de caminhões após a saída neste turno.
 - Horários previstos, por doca: 15h40, 16h, 14h40, 15h20, 16h30, 16h05, 15h30 e 17h.
-- O estoque inicial de cada destino é distribuído entre balcão, doca e caminhão. Os totais por etapa são mutuamente exclusivos.
+- O estoque inicial de cada destino é distribuído entre esteira, balcão, ruas do stage out e caminhão. Os totais por etapa são mutuamente exclusivos.
 - 1 segundo real equivale a 1 minuto simulado em 1×. O relógio para ao concluir as oito saídas.
+- A esteira fica atrás do balcão e o abastece com até 8 volumes por destino por minuto. Na frente, oito ruas são delimitadas com pintura no piso, sem esteiras; cada rua atende o caminhão da doca de mesmo número. Durante uma retenção de balcão, os volumes da esteira continuam chegando e aguardam conferência.
 - O balcão atende os destinos por horário previsto, exceto uma prioridade manual ativa. Confere até 36 volumes/min no cenário atual, 56 no otimizado e 18 no sobrecarregado.
-- Um lote conferido leva 4 minutos simulados para chegar à doca. As caixas em movimento são representações de lotes; uma caixa 3D não equivale a um volume individual.
+- Um lote conferido leva 4 minutos simulados para chegar à rua de stage out. As caixas em movimento são representações de lotes; uma caixa 3D não equivale a um volume individual.
 - Cada doca carrega até `floor(taxa × 8 × (0,86 + doca × 0,035))` volumes/min, limitada ao estoque separado. Taxas: 0,65, 0,94 e 0,55 nos três cenários.
 - A saída exige carga completa, horário previsto atingido e ausência de retenção ativa. Saídas atrasadas são registradas uma única vez. O realizado é o horário efetivo de partida.
 - A estimativa conservadora soma espera de conferência/transporte e carregamento, respeitando o horário previsto e retenções. Como etapas reais da simulação se sobrepõem, ela pode sinalizar risco que se resolve antes do corte. Não é uma previsão validada.
@@ -52,7 +53,7 @@ O build fica em `dist/` e deve ser aberto por um servidor, não clicando diretam
 
 ## Verificação
 
-Em 29/10/2026: **12 testes automatizados aprovados**, TypeScript e build Vite concluídos, servidor local respondendo HTTP 200. A verificação cobre conservação de volumes em todos os cenários durante 600 min, transporte, retenções, prioridade, bloqueio sem estoque, horários, partidas únicas, imutabilidade e comparação determinística.
+Em 29/10/2026: **14 testes automatizados aprovados**, TypeScript e build Vite concluídos, servidor local respondendo HTTP 200. A verificação cobre conservação de volumes em todos os cenários durante 600 min, alimentação da esteira ao balcão, transporte às ruas, retenções, prioridade contínua enquanto há volumes na esteira, bloqueio sem estoque, horários, partidas únicas, imutabilidade e comparação determinística.
 
 Resultados demonstrativos até 17h, sem intervenções manuais:
 
@@ -68,9 +69,10 @@ A ferramenta de navegador está bloqueando a observação da página local; a ap
 
 - `src/ShippingDashboard.tsx`: programação, indicadores, comparação, inspeção e controles.
 - `src/shipping.ts`: regras puras de fluxo, estoque, cortes, prioridade e projeções.
-- `src/Scene.tsx`: balcão, esteiras, rotas, lotes, docas e caminhões.
+- `src/Scene.tsx`: esteira traseira, balcão, ruas demarcadas, lotes, docas e caminhões.
 - `src/shipping.css`: identidade visual e layouts responsivos do Shipping Diário.
 - `src/simulation.test.ts`: testes do modelo integrado.
 - `src/App.tsx` e `src/simulation.ts`: pontos de entrada para o painel e o modelo.
 
 Próximas etapas: validar horários e regras com os responsáveis; conferir legibilidade e desempenho no equipamento de apresentação; definir dados, permissões e critérios de segurança antes de qualquer integração real ou publicação do site.
+

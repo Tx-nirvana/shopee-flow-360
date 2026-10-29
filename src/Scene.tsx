@@ -29,25 +29,44 @@ function MovingParcel({transfer,seconds,running,speed,selected}:{transfer:Transf
  const ref=useRef<Group>(null),timing=useRef({second:seconds,fraction:0});
  useFrame((_,delta)=>{if(!ref.current)return;if(timing.current.second!==seconds)timing.current={second:seconds,fraction:0};else if(running)timing.current.fraction=Math.min(0.95,timing.current.fraction+delta*speed);
   const u=MathUtils.clamp((seconds+timing.current.fraction-transfer.started)/(transfer.arrives-transfer.started),0,1),x=(transfer.dockId-4.5)*3.65;
-  ref.current.position.set(u<0.2?-14:u<0.75?MathUtils.lerp(-14,x,(u-0.2)/0.55):x,1.5,u<0.2?MathUtils.lerp(-13,-9,u/0.2):u<0.75?-9:MathUtils.lerp(-9,-4,(u-0.75)/0.25));
+  ref.current.position.set(x,u<0.25?MathUtils.lerp(1.55,0.45,u/0.25):0.45,MathUtils.lerp(-11.9,-7.2,u));
  });
  return <group ref={ref}><Box p={[0,0,0]} s={[0.6,0.65,0.6]} c={transfer.dockId===selected?'#ff874a':'#d4ad7d'}/><Box p={[0,0.33,0]} s={[0.12,0.02,0.6]} c="#f7ddad"/></group>
 }
+function InboundParcel({dock,seconds,running,speed,selected}:{dock:Dock;seconds:number;running:boolean;speed:number;selected:number}){
+ const ref=useRef<Group>(null),timing=useRef({second:seconds,fraction:0});
+ useFrame((_,delta)=>{if(!ref.current)return;if(timing.current.second!==seconds)timing.current={second:seconds,fraction:0};else if(running)timing.current.fraction=Math.min(0.95,timing.current.fraction+delta*speed);
+  const u=((seconds+timing.current.fraction+dock.id)%8)/8,x=(dock.id-4.5)*3.65;
+  ref.current.position.set(u<0.7?MathUtils.lerp(-14,x,u/0.7):x,1.5,u<0.7?-16:MathUtils.lerp(-16,-13.2,(u-0.7)/0.3));
+ });
+ return <group ref={ref}><Box p={[0,0,0]} s={[0.6,0.65,0.6]} c={dock.id===selected?'#ff874a':'#d4ad7d'}/><Box p={[0,0.33,0]} s={[0.12,0.02,0.6]} c="#f7ddad"/></group>
+}
 function CounterFlow({docks,selected,onSelect,transfers,seconds,running,speed,counterHeld}:{docks:Dock[];selected:number;onSelect:(n:number)=>void;transfers:Transfer[];seconds:number;running:boolean;speed:number;counterHeld:boolean}){return <>
- <Box p={[-10,0.65,-14]} s={[10,1.3,2.6]} c="#38464f"/><Box p={[-10,1.36,-14]} s={[10.3,0.15,2.8]} c={counterHeld?'#ba5748':'#f07840'}/>
- {[-13,-10,-7].map(x=><group key={x}><Box p={[x,1.9,-14.6]} s={[1.2,0.9,0.12]} c="#21303b"/><Box p={[x,1.9,-14.51]} s={[1,0.7,0.02]} c="#6cb5b5"/><Box p={[x+1,1.75,-14]} s={[0.55,0.65,0.55]} c="#d8ae7c"/></group>)}
- <Html position={[-10,3.5,-14]} center distanceFactor={48}><div className={`counter-sign ${counterHeld?'held':''}`}>01 · BALCÃO DE CONFERÊNCIA<small>{counterHeld?'CONFERÊNCIA ADICIONAL':`${docks.reduce((n,d)=>n+d.pending,0)} VOLUMES PENDENTES`}</small></div></Html>
- <Box p={[-14,1,-11]} s={[1.1,0.25,4.2]} c="#38434b"/><Box p={[0,1,-9]} s={[29,0.25,1.1]} c="#38434b"/>
- {Array.from({length:49},(_,i)=><Box key={i} p={[-14.3+i*0.59,1.15,-9]} s={[0.11,0.08,1]} c="#84939c"/>)}
- <Box p={[-14,1.22,-11]} s={[0.08,0.03,4.2]} c="#ff9c57"/>
- <Box p={[((selected-4.5)*3.65-14)/2,1.23,-9]} s={[(selected-4.5)*3.65+14,0.04,0.1]} c="#ff9c57"/>
- {docks.map(d=>{const x=(d.id-4.5)*3.65;return <group key={d.id}>
-  <Box p={[x,1,-6.6]} s={[1.05,0.25,4.8]} c="#38434b"/>
-  <Box p={[x,1.17,-6.6]} s={[0.09,0.035,4.8]} c={d.id===selected?'#ff9c57':'#68828e'}/>
-  <Box p={[x+1.05,0.12,-6]} s={[0.8,0.24,1.1]} c="#9b7957"/>
-  {d.staged>0&&<Box p={[x+1.05,0.6,-6]} s={[0.75,0.75,1]} c={d.id===selected?'#f98a4c':'#b39a7c'}/>}
-  <Html position={[x,2,-7]} center distanceFactor={52}><button className={`route-label ${d.id===selected?'selected':''}`} onClick={()=>onSelect(d.id)} aria-label={`Rota do balcão à doca ${d.id}`}>D{String(d.id).padStart(2,'0')} · {d.staged} vol.</button></Html>
+ {/* Conveyor and its short feeds stay behind the counter. */}
+ <Box p={[0,1,-16]} s={[30,0.25,1.2]} c="#38434b"/>
+ {Array.from({length:51},(_,i)=><Box key={i} p={[-14.7+i*0.59,1.15,-16]} s={[0.11,0.08,1.1]} c="#84939c"/>)}
+ {[-16.66,-15.34].map(z=><Box key={z} p={[0,1.19,z]} s={[30.2,0.1,0.08]} c="#e6b976"/>)}
+ <Html position={[0,2.7,-16.5]} center distanceFactor={48}><div className="conveyor-sign">01 · ESTEIRA DE ENTRADA<small>{docks.reduce((n,d)=>n+d.inbound,0)} VOLUMES A CAMINHO DO BALCÃO</small></div></Html>
+ <Box p={[0,0.65,-12.5]} s={[30,1.3,1.7]} c="#38464f"/><Box p={[0,1.36,-12.5]} s={[30.2,0.15,1.9]} c={counterHeld?'#ba5748':'#f07840'}/>
+ <Html position={[-16.6,2,-12.5]} center distanceFactor={48}><div className={`counter-sign ${counterHeld?'held':''}`}>02 · BALCÃO<small>{counterHeld?'CONFERÊNCIA ADICIONAL':`${docks.reduce((n,d)=>n+d.pending,0)} VOLUMES PENDENTES`}</small></div></Html>
+ {docks.map(d=>{const x=(d.id-4.5)*3.65,active=d.id===selected;return <group key={d.id}>
+  <Box p={[x,1,-14.3]} s={[0.9,0.25,2.2]} c="#38434b"/>
+  {Array.from({length:5},(_,i)=><Box key={i} p={[x,1.15,-15.2+i*0.45]} s={[0.85,0.08,0.08]} c="#84939c"/>)}
+  <Box p={[x,1.9,-12.9]} s={[0.95,0.8,0.12]} c="#21303b"/><Box p={[x,1.9,-12.81]} s={[0.8,0.6,0.02]} c={counterHeld?'#ba5748':'#6cb5b5'}/>
+  {d.pending>0&&<Box p={[x+0.9,1.75,-12.4]} s={[0.55,0.65,0.55]} c="#d8ae7c"/>}
+  <group onClick={e=>{e.stopPropagation();onSelect(d.id)}}>
+   <Box p={[x,0.018,-7.7]} s={[2.8,0.035,7.1]} c={active?'#675342':'#424d53'}/>
+   {[-1.4,1.4].map(offset=><Box key={offset} p={[x+offset,0.045,-7.7]} s={[0.07,0.045,7.1]} c={active?'#ffb65d':'#e6c579'}/>)}
+   <Box p={[x,0.045,-11.2]} s={[2.85,0.045,0.07]} c="#e6c579"/>
+   {[-0.65,0,0.65].map(offset=><Box key={offset} p={[x+offset,0.045,-4.2]} s={[0.4,0.045,0.07]} c="#e6c579"/>)}
+   <Box p={[x,0.04,-5.2]} s={[0.055,0.04,1]} c={active?'#ffb65d':'#b4bda8'}/>
+   <Box p={[x-0.19,0.04,-4.85]} s={[0.5,0.04,0.055]} c={active?'#ffb65d':'#b4bda8'} rotation={[0,-Math.PI/4,0]}/>
+   <Box p={[x+0.19,0.04,-4.85]} s={[0.5,0.04,0.055]} c={active?'#ffb65d':'#b4bda8'} rotation={[0,Math.PI/4,0]}/>
+   {d.staged>0&&<><Box p={[x,0.12,-7.5]} s={[1.8,0.24,2.2]} c="#9b7957"/>{Array.from({length:Math.min(6,Math.ceil(d.staged/40))},(_,i)=><Box key={i} p={[x+(i%2===0?-0.43:0.43),0.55+Math.floor(i/4)*0.7,-7.9+Math.floor(i%4/2)*0.9]} s={[0.75,0.65,0.75]} c={active?'#f98a4c':'#b39a7c'}/>)}</>}
+  </group>
+  <Html position={[x,0.25,-10.15]} center distanceFactor={49}><button className={`route-label street-label ${active?'selected':''}`} onClick={()=>onSelect(d.id)} aria-label={`Selecionar rua ${d.id} do stage out`}>RUA {String(d.id).padStart(2,'0')}<small>STAGE OUT · {d.staged} vol.</small></button></Html>
  </group>})}
+ {docks.filter(d=>d.inbound>0).map(d=><InboundParcel key={d.id} dock={d} seconds={seconds} running={running} speed={speed} selected={selected}/>)}
  {transfers.map(t=><MovingParcel key={t.id} transfer={t} seconds={seconds} running={running} speed={speed} selected={selected}/>)}
  </>}
 type SceneProps={docks:Dock[];selected:number;onSelect:(n:number)=>void;view:number;autoRotate:boolean;transfers:Transfer[];seconds:number;running:boolean;speed:number;counterHeld:boolean}
