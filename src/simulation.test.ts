@@ -1,7 +1,7 @@
 import { defaultConfig, validateConfig } from './parameters'
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { addIncident, clock, forecast, holdCounter, initialState, inTransit, prioritize, project, settings, shippingStatus, summary, tick, type Scenario } from './shipping'
+import { addIncident, clock, forecast, forecastRanges, holdCounter, initialState, inTransit, prioritize, project, settings, shippingStatus, summary, tick, type Scenario } from './shipping'
 
 test('conserva os 6.400 volumes em todas as etapas, sem duplicidade',()=>{
  for(const scenario of Object.keys(settings) as Scenario[]){let s=initialState();for(let i=0;i<600;i++){
@@ -70,3 +70,6 @@ test("cenários isolam a capacidade do balcão",()=>{assert.equal(settings.base.
 
 test("configuração valida limites e mantém total proporcional",()=>{const c=defaultConfig();c.capacities=[1,200,400,600,800,1000,1200,1600];c.checking=80;c.transferMinutes=7;c.dockRates.fill(12);assert.deepEqual(validateConfig(c),[]);let s=initialState(c);for(let i=0;i<720;i++){s=tick(s,"base");const t=summary(s);assert.equal(t.inbound+t.pending+t.transit+t.staged+t.loaded+s.shipped,c.capacities.reduce((a,b)=>a+b,0))}assert.equal(s.departures,8);c.capacities[0]=0;assert.throws(()=>initialState(c))})
 test("balcão e docas podem ser configurados de forma independente",()=>{const c=defaultConfig();c.checking=12;c.dockRates.fill(2);c.transferMinutes=9;const s=initialState(c),a=tick(s,"base"),b=tick(s,"optimized");assert.equal(a.checked,12);assert.equal(b.checked,12);assert.equal(a.docks[0].loaded-s.docks[0].loaded,2);assert.equal(a.transfers[0].arrives-a.transfers[0].started,9);assert.equal(s.config.checking,12);c.dockRates[0]=100;assert.equal(s.config.dockRates[0],2)})
+
+test("previsão provável reproduz etapas paralelas e faixa é ordenada",()=>{const c=defaultConfig();c.planned=[100,120,40,80,150,125,90,180];let s=holdCounter(prioritize(initialState(c),5));s=addIncident(s);const before=JSON.stringify(s),range=forecastRanges(s,"base");assert.equal(JSON.stringify(s),before);for(let i=0;i<1000&&s.departures<8;i++)s=tick(s,"base",true);for(const d of s.docks){assert.equal(range[d.id].likely,d.departedAt);assert.ok(range[d.id].optimistic<=range[d.id].likely);assert.ok(range[d.id].likely<=range[d.id].pessimistic)}})
+test("Campinas não recebe falso risco por somar etapas paralelas",()=>{const c=defaultConfig();c.planned=[100,120,40,80,150,125,90,180];const s=initialState(c);assert.equal(forecast(s,s.docks[1],"base"),120);assert.equal(shippingStatus(s,s.docks[1],"base"),"No prazo")})

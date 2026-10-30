@@ -8,7 +8,7 @@ export type Simulation = { config:SimulationConfig; seconds:number; docks:Dock[]
 export const routes=['São Paulo · SP','Campinas · SP','Curitiba · PR','Rio de Janeiro · RJ','Belo Horizonte · MG','Sorocaba · SP','Ribeirão Preto · SP','Santos · SP']
 export const settings={base:{label:'Operação atual',rate:0.65,checking:36},optimized:{label:'Fluxo otimizado',rate:0.65,checking:56},peak:{label:'Balcão sobrecarregado',rate:0.65,checking:18}}
 export const TURN_MINUTES=720
-export const clock=(minutes:number)=>`${String((8+Math.floor(minutes/60))%24).padStart(2,'0')}:${String(minutes%60).padStart(2,'0')}`
+export const clock=(minutes:number)=>!Number.isFinite(minutes)?'Sem conclusão':`${String((8+Math.floor(minutes/60))%24).padStart(2,'0')}:${String(minutes%60).padStart(2,'0')}`
 export function initialState(config:SimulationConfig=defaultConfig()):Simulation{
  const errors=validateConfig(config);if(errors.length)throw new Error(errors.join(" "));
  const loads=[544,336,728,184,0,448,120,0],staged=[160,240,12,200,80,160,120,80];
@@ -21,20 +21,26 @@ export function addIncident(s:Simulation):Simulation{if(s.incidentUntil>s.second
 export function holdCounter(s:Simulation):Simulation{if(s.counterUntil>s.seconds||s.docks.every(d=>d.pending+d.inbound===0))return s;const next=copy(s);next.counterUntil=s.seconds+20;event(next,'Balcão em conferência adicional','Novos volumes retidos por 20 min; cargas nas ruas continuam para os caminhões','warning');return next}
 export function inTransit(s:Simulation,id?:number){return s.transfers.filter(t=>id===undefined||t.dockId===id).reduce((n,t)=>n+t.volumes,0)}
 export function summary(s:Simulation){return {planned:s.docks.reduce((n,d)=>n+d.capacity,0),inbound:s.docks.reduce((n,d)=>n+d.inbound,0),pending:s.docks.reduce((n,d)=>n+d.pending,0),transit:inTransit(s),staged:s.docks.reduce((n,d)=>n+d.staged,0),loaded:s.docks.filter(d=>d.departedAt===null).reduce((n,d)=>n+d.loaded,0),onTime:s.docks.filter(d=>d.departedAt!==null&&d.departedAt<=d.planned).length}}
-export function forecast(s:Simulation,d:Dock,scenario:Scenario):number{
- if(d.departedAt!==null)return d.departedAt;
- const order=[...s.docks].sort((a,b)=>Number(b.id===s.priority)-Number(a.id===s.priority)||a.planned-b.planned);
- const ahead=order.slice(0,order.findIndex(x=>x.id===d.id)).reduce((n,x)=>n+x.pending+x.inbound,0);
- const counter=d.pending+d.inbound>0?Math.max(0,s.counterUntil-s.seconds)+Math.max(Math.ceil(d.inbound/8),Math.ceil((ahead+d.pending+d.inbound)/(s.config.checking??settings[scenario].checking)))+s.config.transferMinutes:0;
- const moving=Math.max(0,...s.transfers.filter(t=>t.dockId===d.id).map(t=>t.arrives-s.seconds));
- const load=Math.ceil((d.capacity-d.loaded)/Math.max(1,s.config.dockRates[d.id-1]));
- const retention=d.id===4?Math.max(0,s.incidentUntil-s.seconds):0;
- // Conservative estimate: check and transport may overlap loading in the actual simulation.
- return Math.max(d.planned,s.seconds+Math.max(counter,moving,retention)+load);
+export type ForecastRange={optimistic:number;likely:number;pessimistic:number}
+const forecastCache=new WeakMap<Simulation,Partial<Record<Scenario,Record<number,ForecastRange>>>>()
+// Conditional projections: current priority and active holds remain; no new interventions.
+export function forecastRanges(s:Simulation,scenario:Scenario):Record<number,ForecastRange>{
+ const cached=forecastCache.get(s)?.[scenario];if(cached)return cached;
+ const results:Record<number,ForecastRange>={};for(const d of s.docks)results[d.id]={optimistic:Infinity,likely:Infinity,pessimistic:Infinity};
+ for(const [key,factor] of [['optimistic',1.2],['likely',1],['pessimistic',0.8]] as const){
+  let projected=copy(s);projected.config=cloneConfig(s.config);
+  projected.config.checking=Math.max(1,Math.floor((s.config.checking??settings[scenario].checking)*factor));
+  projected.config.dockRates=s.config.dockRates.map(v=>Math.max(1,Math.floor(v*factor)));
+  const limit=Math.max(s.seconds,...s.docks.map(d=>d.planned))+10080;
+  while(projected.departures<projected.docks.length&&projected.seconds<limit)projected=tick(projected,scenario,true);
+  for(const d of projected.docks)results[d.id][key]=d.departedAt??Infinity;
+ }
+ forecastCache.set(s,{...forecastCache.get(s),[scenario]:results});return results;
 }
+export function forecast(s:Simulation,d:Dock,scenario:Scenario):number{return forecastRanges(s,scenario)[d.id].likely}
 export function shippingStatus(s:Simulation,d:Dock,scenario:Scenario){if(d.departedAt!==null)return d.departedAt>d.planned?'Saiu atrasado':'Saiu no prazo';if(s.seconds>=d.planned)return 'Atrasada';if(d.loaded===d.capacity)return 'Pronta';return forecast(s,d,scenario)>d.planned?'Em risco':'No prazo'}
-export function tick(s:Simulation,scenario:Scenario):Simulation{
- if(s.seconds>=TURN_MINUTES)return s;
+export function tick(s:Simulation,scenario:Scenario,afterTurn=false):Simulation{
+ if(s.seconds>=TURN_MINUTES&&!afterTurn)return s;
  const next=copy(s);next.seconds++;const now=next.seconds;
  for(const t of next.transfers.filter(t=>t.arrives<=now)){next.docks[t.dockId-1].staged+=t.volumes}
  next.transfers=next.transfers.filter(t=>t.arrives>now);
