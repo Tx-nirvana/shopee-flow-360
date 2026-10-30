@@ -64,4 +64,4 @@ export function tick(s:Simulation,scenario:Scenario,afterTurn=false):Simulation{
  }
  return next;
 }
-export function project(scenario:Scenario,minutes=TURN_MINUTES,config:SimulationConfig=defaultConfig()){let s=initialState(config);for(let i=0;i<minutes;i++)s=tick(s,scenario);return {volumes:s.shipped,departures:s.departures,onTime:summary(s).onTime,pending:summary(s).pending}}
+export function project(scenario:Scenario,minutes=TURN_MINUTES,config:SimulationConfig=defaultConfig()){let s=initialState(config);for(let i=0;i<minutes;i++)s=tick(s,scenario);return {volumes:s.shipped,departures:s.departures,onTime:summary(s).onTime,pending:summary(s).planned-s.shipped,lateMinutes:s.docks.reduce((n,d)=>n+Math.max(0,(d.departedAt??s.seconds)-d.planned),0),lastDeparture:Math.max(0,...s.docks.map(d=>d.departedAt??0))}}
