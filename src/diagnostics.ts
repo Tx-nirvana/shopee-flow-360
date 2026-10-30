@@ -7,8 +7,8 @@ export function bottleneck(s:Simulation,scenario:Scenario):{stage:Stage|null;det
  const [stage,minutes]=pressure.sort((a,b)=>b[1]-a[1])[0];return minutes>0?{stage,detail:'Maior pressão estimada: '+stage+' ('+Math.ceil(minutes)+' min para escoar o estoque atual).'}:{stage:null,detail:'Sem fila ativa. Caminhões completos aguardam os horários.'};
 }
 export function delayCause(d:Dock):string{
- const entries=Object.entries(d.delay).filter(([,n])=>n>0).sort((a,b)=>b[1]-a[1]);
- return entries.length?entries.map(([stage,n])=>stage+': '+n+' min').join(' · '):'Sem espera após o horário previsto.';
+ const entries:[string,number][]=[['Aguardando abastecimento da esteira',d.delay.esteira],['Fila de conferência no balcão',d.delay['balcão']-d.delay.counterHold],['Retenção do balcão',d.delay.counterHold],['Transferência para a rua',d.delay.rua],['Carregamento na doca',d.delay.doca-d.delay.dockHold],['Retenção da doca',d.delay.dockHold]];
+ return entries.some(([,n])=>n>0)?entries.filter(([,n])=>n>0).sort((a,b)=>b[1]-a[1]).map(([label,n])=>label+': '+n+' min').join(' · '):'Sem espera após o horário previsto.';
 }
 export function turnReport(s:Simulation){
  const delayed=s.docks.filter(d=>d.departedAt!==null?d.departedAt>d.planned:s.seconds>=d.planned);

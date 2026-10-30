@@ -1,7 +1,7 @@
 import { compareScenarios, comparisonCSV } from './comparison'
 import { parseSession, loadSession, saveSession, STORAGE_KEY } from './persistence'
 import { newSession, replay, recordAction, seek } from './timeline'
-import { bottleneck, turnReport } from './diagnostics'
+import { bottleneck, turnReport, delayCause } from './diagnostics'
 import { defaultConfig, validateConfig } from './parameters'
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
@@ -86,3 +86,9 @@ test("persistência restaura configuração e replay integral das intervenções
 test("persistência rejeita dados corrompidos e suporta armazenamento bloqueado",()=>{assert.equal(parseSession("{"),null);assert.equal(parseSession(JSON.stringify({...newSession(),minute:Infinity})),null);assert.equal(parseSession(JSON.stringify({...newSession(),version:2})),null);assert.equal(parseSession(JSON.stringify({...newSession(),actions:[{at:0,type:"priority",dockId:99}]})),null);assert.equal(parseSession(JSON.stringify({...newSession(),config:{}})),null);assert.ok(saveSession(newSession(),null));const broken={getItem:()=>{throw new Error("blocked")},setItem:()=>{throw new Error("quota")}};assert.ok(loadSession(broken).note);assert.ok(saveSession(newSession(),broken))})
 
 test("comparação e CSV usam configuração idêntica e resultados reproduzíveis",()=>{const c=defaultConfig();c.checking=23;c.capacities[0]=900;const before=JSON.stringify(c),r=compareScenarios(c);assert.equal(r.length,3);assert.equal(r[0].checking,23);assert.deepEqual(r[0].volumes,r[1].volumes);const csv=comparisonCSV(c);assert.ok(csv.startsWith("\uFEFF"));assert.ok(csv.includes("DADOS FICTÍCIOS"));assert.ok(csv.includes("Sem intervenções manuais"));assert.equal(csv.split("\r\n").filter(Boolean).length,5);assert.equal(JSON.stringify(c),before)})
+
+test("resumo distingue retenção de doca de carregamento lento",()=>{let s=initialState();s.docks[3].planned=1;s=addIncident(s);s=tick(tick(s,"base"),"base");assert.equal(s.docks[3].delay.dockHold,1);assert.ok(delayCause(s.docks[3]).includes("Retenção da doca: 1 min"));assert.ok(!delayCause(s.docks[3]).includes("Carregamento na doca"))})
+
+test("conserva 6.400 volumes com intervenções combinadas durante todo o turno",()=>{for(const scenario of Object.keys(settings) as Scenario[]){let s=initialState();let seed=12345;for(let minute=0;minute<720;minute++){seed=(Math.imul(seed,1664525)+1013904223)>>>0;if(minute%37===0)s=prioritize(s,seed%8+1);if(minute%83===0)s=holdCounter(s);if(minute%101===0)s=addIncident(s);s=tick(s,scenario);const t=summary(s);assert.equal(t.inbound+t.pending+t.transit+t.staged+t.loaded+s.shipped,6400);for(const d of s.docks)assert.equal(d.inbound+d.pending+d.staged+d.loaded+inTransit(s,d.id),800)}assert.equal(s.departures,8)}})
+test("corte às 20h e pendências preservam capacidade sem saída duplicada",()=>{const c=defaultConfig();c.capacities.fill(10000);c.dockRates.fill(1);c.planned.fill(720);let s=initialState(c);for(let i=0;i<720;i++)s=tick(s,"peak");assert.equal(s.seconds,720);assert.equal(s.departures,0);assert.equal(turnReport(s).pending,80000);assert.equal(tick(s,"peak"),s)})
+test("prioridade não elimina retenção de balcão nem cria capacidade extra",()=>{const s=holdCounter(prioritize(initialState(),5));let next=tick(s,"base");assert.equal(next.checked,0);assert.equal(next.priority,5);for(let i=1;i<20;i++)next=tick(next,"base");assert.equal(next.checked,36);assert.equal(next.docks[4].pending+next.docks[4].inbound,s.docks[4].pending+s.docks[4].inbound-36)})
