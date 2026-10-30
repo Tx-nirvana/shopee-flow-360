@@ -64,3 +64,39 @@ export const FlowRackRollers = memo(function FlowRackRollers({ tables }: { table
         <instancedMesh ref={rails} args={[box, railMaterial, count * 7]} castShadow receiveShadow dispose={null} />
     </>;
 });
+
+
+type FramePart = { p: [number, number, number]; s: [number, number, number]; tilt?: boolean };
+const frameParts: FramePart[] = [];
+for (const x of [-0.73, 0.73]) for (const z of [-1.25, 1.25]) frameParts.push({ p: [x, (1.175 - z * 0.035) / 2, z], s: [0.09, 0.955 - z * 0.035, 0.09] });
+for (const x of [-0.73, 0.73]) frameParts.push({ p: [x, 0.31, 0], s: [0.07, 0.07, 2.57] });
+for (const z of [-1.25, 1.25]) frameParts.push({ p: [0, 0.31, z], s: [1.55, 0.07, 0.07] });
+for (const x of [-0.85, 0.85]) frameParts.push({ p: [x, 0, 0], s: [0.09, 0.13, 2.96], tilt: true });
+for (const z of [-1.44, 1.44]) frameParts.push({ p: [0, 0, z], s: [1.79, 0.13, 0.08], tilt: true });
+for (const z of [-0.8, 0.8]) frameParts.push({ p: [0, -0.09, z], s: [1.63, 0.07, 0.06], tilt: true });
+
+/** Mesmo balcão de roletes, com chassi e pés instanciados para o layout completo. */
+export const FlowRackTables = memo(function FlowRackTables({ tables }: { tables: TablePosition[] }) {
+    const frames = useRef<InstancedMesh>(null), feet = useRef<InstancedMesh>(null), screws = useRef<InstancedMesh>(null);
+    useLayoutEffect(() => {
+        const item = new Object3D(); let frameIndex = 0, footIndex = 0;
+        for (const table of tables) {
+            for (const part of frameParts) {
+                const [x,y,z] = part.p, angle = part.tilt ? 0.035 : 0;
+                item.position.set(table.x + x, part.tilt ? 1.13 + y * Math.cos(angle) - z * Math.sin(angle) : y, table.z + y * Math.sin(angle) + z * Math.cos(angle));
+                item.rotation.set(angle,0,0); item.scale.set(...part.s); item.updateMatrix(); frames.current!.setMatrixAt(frameIndex++, item.matrix);
+            }
+            for (const x of [-0.73,0.73]) for (const z of [-1.25,1.25]) {
+                item.rotation.set(0,0,0); item.scale.set(1,1,1);
+                item.position.set(table.x + x,0.035,table.z + z); item.updateMatrix(); feet.current!.setMatrixAt(footIndex,item.matrix);
+                item.position.y=0.11; item.updateMatrix(); screws.current!.setMatrixAt(footIndex++,item.matrix);
+            }
+        }
+        for (const ref of [frames,feet,screws]) { ref.current!.instanceMatrix.needsUpdate=true; ref.current!.computeBoundingSphere(); }
+    }, [tables]);
+    return <>
+        <instancedMesh ref={frames} args={[box,frameMaterial,tables.length * frameParts.length]} castShadow receiveShadow dispose={null}/>
+        <instancedMesh ref={feet} args={[footGeometry,footMaterial,tables.length * 4]} receiveShadow dispose={null}/>
+        <instancedMesh ref={screws} args={[screwGeometry,screwMaterial,tables.length * 4]} castShadow dispose={null}/>
+    </>;
+});

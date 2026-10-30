@@ -88,3 +88,14 @@ Mudanças: leveLayout.ts, fishingPoints.ts, FishingDashboard.tsx, FishingScene.t
 Como testar: conferir nomes e quantidades em cada bloco e as fileiras MG5; abrir Configurar destinos, preencher apenas MG4 e salvar; recarregar e conferir que só aquela shelf recebeu destino e a referência das mesas não mudou; limpar o campo e salvar para voltar a A confirmar. Alternar 2D/3D, aproximar MG5 e voltar à visão geral. No celular, conferir mapa 2D e editor sem rolagem lateral.
 
 Testes existentes preservados. Três novos testes verificam a contagem/ordem das shelves, migração v2 sem associação implícita e persistência v3 independente do nome e das mesas: 37 aprovados. TypeScript e Vite aprovados. Medidas e modelos de shelves são esquemáticos, aguardando dimensões e referência física.
+
+
+## Correção da referência física — tudo é mesa
+
+O usuário esclareceu que shelf é a identificação da mesa, não uma estante adicional. As estantes foram removidas, e cada uma das 51 identificações do leve agora gera exatamente uma mesa preta de roletes. As nove entradas anteriores de destinos são apenas referência e não criam móveis extras. Nomes, agrupamentos, destinos já salvos e protocolo de armazenamento foram preservados.
+
+Arquivos: leveLayout.ts, FishingScene.tsx, FlowRackTable.tsx, FishingDashboard.tsx, simulation.test.ts e README.md. O chassi, os pés, os parafusos, os trilhos e os rodízios são instanciados no layout completo. A distância entre mesas do MG5 foi ampliada para comportar o mesmo modelo, sem sobreposição. O painel e o mapa usam a palavra mesa.
+
+Como testar: observar os blocos 1–3, cada um com somente três mesas e nenhuma estante atrás; conferir blocos 4/5 com duas/três mesas; aproximar MG5 e conferir 37 mesas em seis fileiras; voltar a Ver todo o leve. As etiquetas com MG4, MG2 e demais nomes pertencem diretamente às mesas. Destinos pendentes continuam A confirmar. O volumoso permanece fora desta tela.
+
+Validação: 38 testes aprovados, incluindo novo teste de uma mesa por identificação, sem duplicação pela referência anterior e sem sobreposição. Testes existentes preservados. TypeScript e build Vite aprovados. Verificação visual de visão geral, aproximação e ausência das estantes.

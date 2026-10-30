@@ -1,3 +1,4 @@
+import { leveTablePositions } from './leveLayout';
 import { compareScenarios, comparisonCSV } from './comparison';
 import { parseSession, loadSession, saveSession, STORAGE_KEY } from './persistence';
 import { newSession, replay, recordAction, seek } from './timeline';
@@ -225,4 +226,19 @@ test('destino por shelf persiste independentemente do nome e das mesas', () => {
     restored[0].shelves[0].name = 'SOC_BETIM';
     assert.ok(validateFishingPoints(restored).length);
     assert.deepEqual(parseFishingPoints(JSON.stringify({version:3,points:restored})), defaultFishingPoints());
+});
+
+
+test('cada identificação do leve gera uma única mesa, sem duplicar a referência anterior', () => {
+    const points = defaultFishingPoints();
+    const positions = leveTablePositions(points);
+    assert.equal(positions.length, 51);
+    assert.equal(new Set(positions.map(p => p.x + ':' + p.z)).size, 51);
+    assert.equal(leveTablePositions(points.slice(0,3)).length, 9);
+    points[0].tables.push({id:4,destination:'REFERENCIA_APENAS'});
+    assert.equal(leveTablePositions(points).length, 51);
+    for (const a of positions) for (const b of positions) {
+        if (a === b) continue;
+        assert.ok(Math.abs(a.x - b.x) >= 1.79 || Math.abs(a.z - b.z) >= 2.96, 'mesas não se sobrepõem');
+    }
 });

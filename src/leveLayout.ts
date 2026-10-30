@@ -27,6 +27,11 @@ export const LEVE_BLOCKS = [
 export function shelfLocation(pointId: number, shelf: LeveShelf) {
     const block = LEVE_BLOCKS[pointId - 1];
     return pointId === 6
-        ? { x: block.x + (shelf.row - 3.5) * 5, z: 1.2 + (shelf.position - 1) * 2.8 }
-        : { x: block.x + (shelf.position - 2) * 3.6, z: 9.2 };
+        ? { x: block.x + (shelf.row - 3.5) * 5, z: 2.4 + (shelf.position - 1) * 4.4 }
+        : { x: block.x + (shelf.position - 2) * 3.6, z: 2.4 };
+}
+
+/** Cada identificação corresponde a uma mesa; a referência antiga não cria móveis extras. */
+export function leveTablePositions(points: { id: number; shelves: LeveShelf[] }[]) {
+    return points.flatMap(point => point.shelves.map(shelf => shelfLocation(point.id, shelf)));
 }
