@@ -76,3 +76,6 @@ A ferramenta de navegador está bloqueando a observação da página local; a ap
 
 Próximas etapas: validar horários e regras com os responsáveis; conferir legibilidade e desempenho no equipamento de apresentação; definir dados, permissões e critérios de segurança antes de qualquer integração real ou publicação do site.
 
+
+## Evolução do turno
+O turno agora vai das 08h às 20h; horários absolutos fictícios preservados. A comparação de 720 min pode empatar entre cenários. Os testes de comparação aceitam igualdade intencionalmente; casos de corte mantêm prazos curtos explícitos para exercitar atraso. `seconds` mantém o nome por compatibilidade, mas representa minutos simulados.

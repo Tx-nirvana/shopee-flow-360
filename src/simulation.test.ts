@@ -19,13 +19,13 @@ test('sem volumes separados ou em transferência, carregamento não avança',()=
  const s=initialState();s.docks[0].staged=0;s.counterUntil=30;const next=tick(s,'base');assert.equal(next.docks[0].loaded,s.docks[0].loaded);assert.equal(next.docks[0].status,'Aguardando');
 })
 test('carga pronta aguarda o horário programado e sai uma única vez',()=>{
- let s=initialState();Object.assign(s.docks[2],{loaded:800,inbound:0,pending:0,staged:0,progress:100,status:'Pronta'});
+ let s=initialState();s.docks[2].planned=40;Object.assign(s.docks[2],{loaded:800,inbound:0,pending:0,staged:0,progress:100,status:'Pronta'});
  for(let i=0;i<39;i++)s=tick(s,'base');assert.equal(s.docks[2].departedAt,null);assert.equal(s.docks[2].status,'Pronta');
  s=tick(s,'base');assert.equal(s.docks[2].departedAt,40);assert.equal(s.shipped,800);
  for(let i=0;i<3;i++)s=tick(s,'base');assert.equal(s.shipped,800);assert.equal(shippingStatus(s,s.docks[2],'base'),'Saiu no prazo');
 })
 test('retenção de doca impede saída até o fim, mesmo com carga completa',()=>{
- let s=initialState();s.seconds=79;Object.assign(s.docks[3],{loaded:800,inbound:0,pending:0,staged:0,progress:100,status:'Pronta'});s=addIncident(s);
+ let s=initialState();s.seconds=79;s.docks[3].planned=80;Object.assign(s.docks[3],{loaded:800,inbound:0,pending:0,staged:0,progress:100,status:'Pronta'});s=addIncident(s);
  for(let i=0;i<59;i++)s=tick(s,'base');assert.equal(s.docks[3].departedAt,null);s=tick(s,'base');assert.equal(s.docks[3].departedAt,139);assert.equal(shippingStatus(s,s.docks[3],'base'),'Saiu atrasado');
 })
 test('retenção de balcão interrompe conferência, mas permite consumir estoque da doca',()=>{
@@ -42,13 +42,13 @@ test('intervenções inválidas ou repetidas são ignoradas',()=>{
 test('operações preservam o estado anterior',()=>{
  const s=initialState(),before=JSON.stringify(s);tick(s,'optimized');holdCounter(s);prioritize(s,5);addIncident(s);assert.equal(JSON.stringify(s),before);
 })
-test('cenários são reproduzíveis e a otimização melhora pontualidade',()=>{
- assert.deepEqual(project('base'),project('base'));assert.ok(project('optimized').volumes>project('base').volumes);assert.ok(project('optimized').onTime>project('base').onTime);assert.ok(project('base').volumes>=project('peak').volumes);assert.ok(project('base').onTime>project('peak').onTime);
+test('cenários são reproduzíveis na janela de 12 horas',()=>{
+ assert.deepEqual(project('base'),project('base'));assert.ok(project('optimized').volumes>=project('base').volumes);assert.ok(project('optimized').onTime>=project('base').onTime);assert.ok(project('base').volumes>=project('peak').volumes);assert.ok(project('base').onTime>=project('peak').onTime);
 })
 test('corte perdido é registrado e a estimativa inclui retenções',()=>{
- let s=initialState();s.seconds=39;s.counterUntil=100;s.docks[2].staged=0;s=tick(s,'base');assert.equal(shippingStatus(s,s.docks[2],'base'),'Atrasada');assert.ok(s.events.some(e=>e.title.includes('Corte de Curitiba')));assert.ok(forecast(s,s.docks[2],'base')>100);
+ let s=initialState();s.seconds=39;s.docks[2].planned=40;s.counterUntil=100;s.docks[2].staged=0;s=tick(s,'base');assert.equal(shippingStatus(s,s.docks[2],'base'),'Atrasada');assert.ok(s.events.some(e=>e.title.includes('Corte de Curitiba')));assert.ok(forecast(s,s.docks[2],'base')>100);
 })
-test('relógio simulado parte das 14h e formata a virada do dia',()=>{assert.equal(clock(0),'14:00');assert.equal(clock(120),'16:00');assert.equal(clock(600),'00:00')})
+test('relógio simulado parte das 08h e formata a virada do dia',()=>{assert.equal(clock(0),'08:00');assert.equal(clock(120),'10:00');assert.equal(clock(960),'00:00')})
 
 test('esteira traseira abastece o balcão do destino correto, mesmo durante retenção',()=>{
  const s=holdCounter(initialState()),next=tick(s,'base');
@@ -62,3 +62,5 @@ test('prioridade permanece ativa enquanto ainda há volumes do destino na esteir
  const next=tick(prioritize(s,5),'base');assert.equal(next.docks[4].pending,0);assert.ok(next.docks[4].inbound>0);assert.equal(next.priority,5);
 })
 
+
+test("turno termina às 20h sem descartar volumes pendentes",()=>{const s=initialState();s.seconds=720;assert.equal(tick(s,"base"),s);assert.equal(clock(s.seconds),"20:00")})

@@ -6,10 +6,11 @@ export type SimEvent = { id:number; time:number; title:string; detail:string; ki
 export type Simulation = { seconds:number; docks:Dock[]; shipped:number; departures:number; events:SimEvent[]; incidentUntil:number; counterUntil:number; transfers:Transfer[]; checked:number; priority:number|null; nextId:number }
 export const routes=['São Paulo · SP','Campinas · SP','Curitiba · PR','Rio de Janeiro · RJ','Belo Horizonte · MG','Sorocaba · SP','Ribeirão Preto · SP','Santos · SP']
 export const settings={base:{label:'Operação atual',rate:0.65,checking:36},optimized:{label:'Fluxo otimizado',rate:0.94,checking:56},peak:{label:'Balcão sobrecarregado',rate:0.55,checking:18}}
-export const clock=(minutes:number)=>`${String((14+Math.floor(minutes/60))%24).padStart(2,'0')}:${String(minutes%60).padStart(2,'0')}`
+export const TURN_MINUTES=720
+export const clock=(minutes:number)=>`${String((8+Math.floor(minutes/60))%24).padStart(2,'0')}:${String(minutes%60).padStart(2,'0')}`
 export function initialState():Simulation{
  const loads=[544,336,728,184,0,448,120,0],staged=[160,240,12,200,80,160,120,80];
- return {seconds:0,shipped:0,departures:0,incidentUntil:0,counterUntil:0,checked:0,priority:null,nextId:1,transfers:[],events:[{id:0,time:0,title:'Shipping Diário iniciado',detail:'Esteira → balcão → ruas (stage out) → caminhões → expedidos · 6.400 volumes fictícios',kind:'info'}],docks:routes.map((route,i)=>({id:i+1,route,truck:`SHP-${2401+i*17}`,progress:loads[i]/8,status:loads[i]?'Carregando':'Aguardando',loaded:loads[i],capacity:800,inbound:Math.max(0,800-loads[i]-staged[i]-80),pending:Math.min(80,800-loads[i]-staged[i]),staged:staged[i],planned:[100,120,40,80,150,125,90,180][i],departedAt:null}))}
+ return {seconds:0,shipped:0,departures:0,incidentUntil:0,counterUntil:0,checked:0,priority:null,nextId:1,transfers:[],events:[{id:0,time:0,title:'Shipping Diário iniciado',detail:'Esteira → balcão → ruas (stage out) → caminhões → expedidos · 6.400 volumes fictícios',kind:'info'}],docks:routes.map((route,i)=>({id:i+1,route,truck:`SHP-${2401+i*17}`,progress:loads[i]/8,status:loads[i]?'Carregando':'Aguardando',loaded:loads[i],capacity:800,inbound:Math.max(0,800-loads[i]-staged[i]-80),pending:Math.min(80,800-loads[i]-staged[i]),staged:staged[i],planned:[460,480,400,440,510,485,450,540][i],departedAt:null}))}
 }
 function event(s:Simulation,title:string,detail:string,kind:SimEvent['kind']='info'){s.events=[{id:s.nextId++,time:s.seconds,title,detail,kind},...s.events].slice(0,40)}
 function copy(s:Simulation):Simulation{return {...s,docks:s.docks.map(d=>({...d})),transfers:s.transfers.map(t=>({...t})),events:[...s.events]}}
@@ -31,6 +32,7 @@ export function forecast(s:Simulation,d:Dock,scenario:Scenario):number{
 }
 export function shippingStatus(s:Simulation,d:Dock,scenario:Scenario){if(d.departedAt!==null)return d.departedAt>d.planned?'Saiu atrasado':'Saiu no prazo';if(s.seconds>=d.planned)return 'Atrasada';if(d.loaded===d.capacity)return 'Pronta';return forecast(s,d,scenario)>d.planned?'Em risco':'No prazo'}
 export function tick(s:Simulation,scenario:Scenario):Simulation{
+ if(s.seconds>=TURN_MINUTES)return s;
  const next=copy(s);next.seconds++;const now=next.seconds;
  for(const t of next.transfers.filter(t=>t.arrives<=now)){next.docks[t.dockId-1].staged+=t.volumes}
  next.transfers=next.transfers.filter(t=>t.arrives>now);
@@ -51,4 +53,4 @@ export function tick(s:Simulation,scenario:Scenario):Simulation{
  }
  return next;
 }
-export function project(scenario:Scenario,minutes=180){let s=initialState();for(let i=0;i<minutes;i++)s=tick(s,scenario);return {volumes:s.shipped,departures:s.departures,onTime:summary(s).onTime,pending:summary(s).pending}}
+export function project(scenario:Scenario,minutes=TURN_MINUTES){let s=initialState();for(let i=0;i<minutes;i++)s=tick(s,scenario);return {volumes:s.shipped,departures:s.departures,onTime:summary(s).onTime,pending:summary(s).pending}}
