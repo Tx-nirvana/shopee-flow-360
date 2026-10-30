@@ -1,1 +1,1 @@
-export { default } from "./ShippingDashboard"
+export { default } from "./ShippingDashboard";

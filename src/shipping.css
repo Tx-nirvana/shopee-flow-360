@@ -22,3 +22,5 @@
 .test-site{padding:22px;display:flex;justify-content:space-between;align-items:center;gap:24px;margin-top:20px}.test-site h2{font-size:20px;margin:8px 0}.test-site p{font-size:14px;max-width:720px}.test-site a{flex-shrink:0}@media(max-width:760px){.test-site{align-items:stretch;flex-direction:column}.test-site a{white-space:normal;text-align:center}}
 
 .time-scrubber{display:flex;flex-direction:column;gap:10px;font-size:14px;color:#d4e0e8;margin-top:16px}.time-scrubber input{width:100%;accent-color:#f89158;min-height:44px}.time-scrubber small{font-size:12px;color:#b9cbd8}.help-button{min-height:44px}@media(max-width:600px){header{height:auto;min-height:84px;gap:12px;padding:14px}.header-right{flex-wrap:nowrap}.header-right button{font-size:12px;padding:8px}.wordmark{min-width:115px}}
+
+.table-scroll{position:relative;max-width:100%;min-width:0}.scene-title{gap:8px}.scene-title>div{min-width:0;flex:1}.scene-title .secondary{font-size:12px;padding:6px;flex-shrink:0}
