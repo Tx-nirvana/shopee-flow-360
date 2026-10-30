@@ -1,7 +1,8 @@
-import { memo, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { ContactShadows, Html, OrbitControls } from '@react-three/drei';
 import type { FishingPoint } from './fishingPoints';
+import { FlowRackTable, FlowRackRollers } from './FlowRackTable';
 import { BoxGeometry, Group, InstancedMesh, MeshStandardMaterial, Object3D } from 'three';
 const geometry = new BoxGeometry(1, 1, 1);
 const materialCache = new Map<string, MeshStandardMaterial>();
@@ -53,24 +54,38 @@ function Parcels({ animate }: {
         <Box p={[0, 0.38, 0]} s={[0.15, 0.025, 0.92]} c="#f1d6a5"/>
     </group>)}</group>;
 }
-function FitCamera({ top }: {
+function FitCamera({ top, detail, selected }: {
     top: boolean;
+    detail: boolean;
+    selected: number;
 }) {
     const { camera, size, invalidate } = useThree();
     useEffect(() => {
+        if (detail) {
+            const x = positions[selected - 1] - 3.25;
+            camera.position.set(x - 3.4, 3.1, 8.5);
+            camera.lookAt(x, 0.7, 3.4);
+            invalidate();
+            return;
+        }
         const factor = Math.max(1, size.height / Math.max(size.width, 1) * 1.8);
         camera.position.set(top ? 0 : 25 * factor, top ? 69 * factor : 43 * factor, top ? 1.1 : 53 * factor);
         camera.lookAt(0, 0, 1);
         invalidate();
-    }, [camera, size.width, size.height, top, invalidate]);
+    }, [camera, size.width, size.height, top, detail, selected, invalidate]);
     return null;
 }
-function Layout({ points, selected, onSelect, animate }: {
+function Layout({ points, selected, onSelect, animate, detail }: {
     points: FishingPoint[];
     selected: number;
     onSelect: (id: number) => void;
     animate: boolean;
+    detail: boolean;
 }) {
+    const tables = useMemo(() => points.flatMap((point, i) => point.tables.filter((_, index) => !detail || (point.id === selected && index === 0)).map((_, index) => ({
+        x: positions[i] + ((index % 3) - 1) * 3.25,
+        z: 3.4 + Math.floor(index / 3) * 3.1,
+    }))), [points, detail, selected]);
     return <>
         <Box p={[0, -0.25, 1.5]} s={[88, 0.5, 26]} c="#44525b"/>
         <Box p={[0, 1.33, -3.2]} s={[81, 0.4, 2.2]} c="#26353f"/>
@@ -78,42 +93,45 @@ function Layout({ points, selected, onSelect, animate }: {
         {[-4.38, -2.02].map(z => <Box key={z} p={[0, 1.73, z]} s={[81.2, 0.14, 0.12]} c="#ed975b"/>)}
         {[-39, -26, -13, 0, 13, 26, 39].map(x => <Box key={x} p={[x, 0.6, -3.2]} s={[0.18, 1.2, 1.5]} c="#7a8a92"/>)}
         <Parcels animate={animate}/>
+        <FlowRackRollers tables={tables} />
         {positions.map((x, i) => {
+            if (detail && selected !== i + 1) return null;
             const id = i + 1, active = selected === id, point = points[i];
             return <group key={id} onClick={e => { e.stopPropagation(); onSelect(id); }}>
                 <Box p={[x, 0.03, 3.5]} s={[10.8, 0.05, 10]} c={active ? '#67513d' : '#35434d'}/>
                 {[-5.45, 5.45].map(offset => <Box key={offset} p={[x + offset, 0.07, 3.5]} s={[0.06, 0.05, 10]} c={active ? '#ffba77' : '#8a9c98'}/>)}
                 {point.tables.map((table, index) => {
+                    if (detail && index !== 0) return null;
                     const tx = x + ((index % 3) - 1) * 3.25, tz = 3.4 + Math.floor(index / 3) * 3.1;
                     return <group key={table.id}>
-                        <Box p={[tx, 1.08, tz]} s={[2.65, 0.24, 2.3]} c={active ? '#f39452' : '#d1b18a'}/>
-                        {[-1.05, 1.05].map(offset => <Box key={offset} p={[tx + offset, 0.48, tz]} s={[0.15, 0.96, 1.9]} c="#283944"/>)}
-                        <Box p={[tx + 0.65, 1.54, tz + 0.55]} s={[0.58, 0.68, 0.12]} c="#1f343f"/>
-                        <Box p={[tx + 0.65, 1.55, tz + 0.48]} s={[0.45, 0.5, 0.02]} c={active ? '#f6b676' : '#8bb7bb'}/>
-                        {active && <Html position={[tx, 1.3, tz - 0.3]} center distanceFactor={28}><span className="fish-table-marker" title={table.destination}>M{table.id}</span></Html>}
+                        <FlowRackTable x={tx} z={tz} />
+                        {active && !detail && <Html position={[tx, 1.3, tz - 0.5]} center distanceFactor={28}><span className="fish-table-marker" title={table.destination}>M{table.id}</span></Html>}
                     </group>;
                 })}
-                <Html position={[x, 0.3, 8.1]} center distanceFactor={36}><button className={`fish-scene-number ${active ? 'selected' : ''}`} onClick={() => onSelect(id)} aria-label={`Selecionar ponto de pesca ${id}`} aria-pressed={active}>{String(id).padStart(2, '0')}</button></Html>
+                {!detail && <Html position={[x, 0.3, 8.1]} center distanceFactor={36}><button className={`fish-scene-number ${active ? 'selected' : ''}`} onClick={() => onSelect(id)} aria-label={`Selecionar ponto de pesca ${id}`} aria-pressed={active}>{String(id).padStart(2, '0')}</button></Html>}
             </group>;
         })}
         <ContactShadows position={[0, 0.01, 1]} opacity={0.35} scale={80} blur={2.2} far={16} frames={1}/>
     </>;
 }
-export default memo(function FishingScene({ points, selected, onSelect, animate, top }: {
+export default memo(function FishingScene({ points, selected, onSelect, animate, top, detail }: {
     points: FishingPoint[];
     selected: number;
     onSelect: (id: number) => void;
     animate: boolean;
     top: boolean;
+    detail: boolean;
 }) {
     const [reduced, setReduced] = useState(() => matchMedia('(prefers-reduced-motion: reduce)').matches);
     useEffect(() => { const media = matchMedia('(prefers-reduced-motion: reduce)'), update = () => setReduced(media.matches); media.addEventListener('change', update); return () => media.removeEventListener('change', update); }, []);
     const moving = animate && !reduced;
+    const detailMode = detail && points[selected - 1].tables.length > 0;
+    const target: Vector = detailMode ? [positions[selected - 1] - 3.25, 0.7, 3.4] : [0, 0, 1];
     return <Canvas shadows frameloop={moving ? 'always' : 'demand'} dpr={[1, 1.5]} camera={{ position: [25, 43, 53], fov: 47 }} fallback={<p className="fish-fallback">3D indisponível. Use o mapa 2D e os cartões dos seis pontos.</p>}>
         <color attach="background" args={['#19252e']}/>
         <ambientLight intensity={1.8}/><hemisphereLight args={['#e2efff', '#38434b', 1.4]}/>
         <directionalLight position={[-20, 35, 20]} intensity={3} castShadow shadow-mapSize={[1024, 1024]} shadow-camera-left={-40} shadow-camera-right={40} shadow-camera-top={30} shadow-camera-bottom={-25}/>
-        <FitCamera top={top}/><Layout points={points} selected={selected} onSelect={onSelect} animate={moving}/>
-        <OrbitControls makeDefault target={[0, 0, 1]} minDistance={35} maxDistance={160} maxPolarAngle={Math.PI / 2.4}/>
+        <FitCamera top={top} detail={detailMode} selected={selected}/><Layout points={points} selected={selected} onSelect={onSelect} animate={moving} detail={detailMode}/>
+        <OrbitControls makeDefault target={target} minDistance={detailMode ? 2.4 : 35} maxDistance={detailMode ? 14 : 160} maxPolarAngle={Math.PI / 2.2}/>
     </Canvas>;
 });

@@ -19,7 +19,7 @@ Há **nove mesas informadas**, em três dos seis pontos, e três destinos distin
 
 ## Visualização
 
-- Cena 3D ampla, com mais separação entre pontos e mesas individuais. Somente os três primeiros pontos têm mobiliário de mesas configurado.
+- Cena 3D ampla, com mais separação entre pontos e mesas individuais. Balcões compactos pretos inspirados na referência enviada: leito de pequenos rodízios, chassi metálico aberto, travessas e pés reguláveis. Use Detalhe da mesa para examinar a primeira mesa do ponto selecionado, e Voltar ao layout para retornar às nove mesas. Somente os três primeiros pontos têm mobiliário de mesas configurado.
 - Seletor de ponto, vista superior e em perspectiva, mapa 2D, animação visual da esteira e restauração da câmera.
 - Os nomes completos dos destinos ficam em cartões fora da cena, evitando sobreposição de rótulos.
 - No celular, o mapa 2D abre por padrão. O 3D pode ser ativado manualmente.

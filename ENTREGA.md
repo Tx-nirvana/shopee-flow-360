@@ -67,3 +67,9 @@ A tela principal agora foca somente em esteira e balcão. Seis pontos separados,
 Destinos repetidos são permitidos e cada mesa permanece um registro individual. O layout 3D mostra somente mobiliário configurado; números de mesas e nomes completos aparecem separadamente dos objetos para evitar sobreposição. Mapa 2D por padrão no celular, edição local por linha/mesa e recuperação segura do mapeamento. Nenhum volume, capacidade por mesa ou taxa operacional foi inventado. A animação de caixas é apenas visual.
 
 Arquivos: App.tsx, FishingDashboard.tsx, FishingScene.tsx, fishingPoints.ts, fishing.css e simulation.test.ts. Testar seleção de pontos 1–6, repetição de SOC_BETIM, três mesas de Guarulhos, pontos sem configuração, salvar/recarregar e vista 2D em 390 px. Os 30 testes anteriores foram mantidos e quatro testes de configuração de mesas foram adicionados: total de 34 aprovados. TypeScript e Vite aprovados.
+
+## Atualização visual — balcão de roletes preto
+
+As mesas passaram a usar o modelo de flow rack mostrado na referência, em proporção compacta e acabamento preto. Cada mesa tem sete canais de pequenos rodízios, chassi aberto, travessas e pés reguláveis. A seleção mantém a mesa preta e destaca a área no piso. Os monitores fictícios foram removidos. A vista Detalhe da mesa isola a primeira mesa do ponto selecionado para inspeção; Voltar ao layout restaura a visão completa. Medidas e inclinação são ilustrativas, pois não foram informadas dimensões reais.
+
+Arquivos: FlowRackTable.tsx, FishingScene.tsx, FishingDashboard.tsx e fishing.css. Componentes de rodízios e trilhos usam instâncias para reduzir chamadas de desenho. Nenhuma associação ponto/mesa/destino ou regra do motor foi alterada. Verificação: testes existentes, TypeScript/build, vista de perto, retorno ao layout e persistência visual do acabamento preto.
