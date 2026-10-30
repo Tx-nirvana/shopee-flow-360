@@ -77,3 +77,14 @@ Arquivos: FlowRackTable.tsx, FishingScene.tsx, FishingDashboard.tsx e fishing.cs
 ## Visão geral e quantidade de mesas
 
 A tela abre na visão superior enquadrando todos os seis pontos e nove mesas informadas (3 + 3 + 3). O botão Ver tudo restaura o enquadramento completo. A aproximação de detalhe altera somente a câmera: nenhum ponto, mesa, rodízio ou trilho é filtrado da cena. Na visão geral, todas as nove mesas recebem identificação M1/M2/M3. A indicação de quantidade fica junto aos controles da cena.
+
+
+## Shelves do leve — identificação separada do destino
+
+A referência HTML passa a informar exclusivamente nomes e agrupamentos de shelves no plano do leve. Blocos 1–5 têm 3/3/3/2/3 identificações; MG5 tem 37, em seis fileiras (6/6/6/6/7/6). Não são 51 mesas. As nove mesas anteriores e seus destinos permanecem como referência independente. As associações individuais shelf → destino começam nulas, exibidas como A confirmar.
+
+Mudanças: leveLayout.ts, fishingPoints.ts, FishingDashboard.tsx, FishingScene.tsx, fishing.css, simulation.test.ts e README.md. O editor agora atribui destino à shelf identificada e salva versão 3; versão 2 é migrada sem inferir associações. O 3D diferencia mesas com roletes de shelves esquemáticas, amplia a área MG5 e permite aproximar qualquer bloco sem remover o restante. Componentes repetidos das shelves usam instâncias. Volumoso não é incluído.
+
+Como testar: conferir nomes e quantidades em cada bloco e as fileiras MG5; abrir Configurar destinos, preencher apenas MG4 e salvar; recarregar e conferir que só aquela shelf recebeu destino e a referência das mesas não mudou; limpar o campo e salvar para voltar a A confirmar. Alternar 2D/3D, aproximar MG5 e voltar à visão geral. No celular, conferir mapa 2D e editor sem rolagem lateral.
+
+Testes existentes preservados. Três novos testes verificam a contagem/ordem das shelves, migração v2 sem associação implícita e persistência v3 independente do nome e das mesas: 37 aprovados. TypeScript e Vite aprovados. Medidas e modelos de shelves são esquemáticos, aguardando dimensões e referência física.

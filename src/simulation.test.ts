@@ -192,3 +192,37 @@ test('pescas preservam seis pontos e nove mesas conforme divisão informada',()=
 test('mesas distintas podem repetir destinos no mesmo ponto ou entre pontos',()=>{const points=defaultFishingPoints();assert.deepEqual(validateFishingPoints(points),[]);assert.equal(points[0].tables[0].destination,points[0].tables[2].destination);assert.equal(points[0].tables[0].destination,points[2].tables[0].destination)})
 test('editor mantém ordem das mesas e não elimina destinos repetidos',()=>{assert.deepEqual(tablesFromLines('SOC_BETIM\nSOC_CONTAGEM_INDUSTRIAL\nSOC_BETIM').map(t=>[t.id,t.destination]),[[1,'SOC_BETIM'],[2,'SOC_CONTAGEM_INDUSTRIAL'],[3,'SOC_BETIM']]);assert.deepEqual(tablesFromLines('  '),[]);const points=emptyFishingPoints();points[0].tables=tablesFromLines('SOC_BETIM\n\nSOC_BETIM');assert.ok(validateFishingPoints(points).length)})
 test('mapa salvo preserva mesas e recupera a configuração informada se inválido',()=>{const points=defaultFishingPoints();assert.deepEqual(parseFishingPoints(JSON.stringify({version:2,points})),points);assert.deepEqual(parseFishingPoints('{'),points);assert.deepEqual(parseFishingPoints(null),points);assert.deepEqual(parseFishingPoints(JSON.stringify({version:1,points})),points);const next=defaultFishingPoints();next[0].tables[0].destination='OUTRO';assert.equal(defaultFishingPoints()[0].tables[0].destination,'SOC_BETIM');assert.ok(validateFishingPoints(points.slice(0,3)).length)})
+
+
+test('shelves do leve mantêm identificação e fileiras sem inferir destinos', () => {
+    const points = defaultFishingPoints();
+    assert.deepEqual(points.map(p => p.shelves.length), [3,3,3,2,3,37]);
+    assert.equal(points.flatMap(p => p.shelves).length, 51);
+    assert.deepEqual(points[0].shelves.map(s => s.name), ['MG4','MG2','BETIM-1']);
+    assert.deepEqual(points[3].shelves.map(s => s.name), ['SP5 -2','RS-2']);
+    assert.ok(points.flatMap(p => p.shelves).every(s => s.destination === null));
+    assert.deepEqual([1,2,3,4,5,6].map(row => points[5].shelves.filter(s => s.row === row).length), [6,6,6,6,7,6]);
+    assert.equal(new Set(points[5].shelves.map(s => s.id)).size, 37);
+    assert.equal(points[5].shelves.find(s => s.name === 'MG5-119')?.row, 5);
+});
+test('migração v2 preserva referência das mesas sem associar destinos às shelves', () => {
+    const legacy = defaultFishingPoints().map(({id,tables}) => ({id,tables}));
+    legacy[0].tables[0].destination = 'REFERENCIA_SALVA';
+    const next = parseFishingPoints(JSON.stringify({version:2,points:legacy}));
+    assert.equal(next[0].tables[0].destination, 'REFERENCIA_SALVA');
+    assert.equal(next.flatMap(p => p.shelves).length,51);
+    assert.ok(next.flatMap(p => p.shelves).every(s => s.destination === null));
+});
+test('destino por shelf persiste independentemente do nome e das mesas', () => {
+    const points = defaultFishingPoints();
+    points[0].shelves[0].destination = 'SOC_BETIM';
+    points[5].shelves.find(s => s.name === 'MG5-119')!.destination = 'HUB_TESTE';
+    const restored = parseFishingPoints(JSON.stringify({version:3,points}));
+    assert.deepEqual(restored, points);
+    assert.equal(restored[0].shelves[0].name, 'MG4');
+    assert.equal(restored[0].shelves[1].destination, null);
+    assert.equal(restored[0].tables[0].destination, 'SOC_BETIM');
+    restored[0].shelves[0].name = 'SOC_BETIM';
+    assert.ok(validateFishingPoints(restored).length);
+    assert.deepEqual(parseFishingPoints(JSON.stringify({version:3,points:restored})), defaultFishingPoints());
+});

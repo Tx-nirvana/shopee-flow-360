@@ -1,36 +1,34 @@
-# Shopee Flow 360 · Esteira & Balcão
+# Shopee Flow 360 · Layout do leve
 
-Site público: https://shopee-flow-360-teste.peppycrow2.chatgpt.site
+Aplicação React, TypeScript, React Three Fiber e Vite. Layout ilustrativo e sem escala, baseado no HTML fornecido pelo usuário. Nesta etapa a tela mostra somente o leve: esteira, seis blocos, mesas pretas com roletes e shelves identificadas.
 
-Visualização focada na esteira principal, em seis pontos de pesca e nas mesas de cada ponto. Caminhões, docas e indicadores de expedição saíram da tela principal nesta etapa.
+## Shelves e destinos
 
-## Divisão informada pelo usuário
+Nome da shelf é uma identificação; destino é um campo independente, inicialmente A confirmar. Não são importadas associações de destino do HTML.
 
-| Ponto | Mesa 1 | Mesa 2 | Mesa 3 |
-|---|---|---|---|
-| 1 | SOC_BETIM | SOC_CONTAGEM_INDUSTRIAL | SOC_BETIM |
-| 2 | SOC_SP_GUARULHOS | SOC_SP_GUARULHOS | SOC_SP_GUARULHOS |
-| 3 | SOC_BETIM | SOC_BETIM | SOC_BETIM |
-| 4 | A informar | A informar | A informar |
-| 5 | A informar | A informar | A informar |
-| 6 | A informar | A informar | A informar |
+| Bloco | Identificações |
+| --- | --- |
+| 1 | MG4, MG2, BETIM-1 |
+| 2 | SP25-1, SP25-2, SC1-2 |
+| 3 | ES, C3, PR1 |
+| 4 | SP5 -2, RS-2 |
+| 5 | BA-2, GO-2, PE-2 |
+| 6 · MG5 | 37 posições em seis fileiras, na ordem do HTML |
 
-Há **nove mesas informadas**, em três dos seis pontos, e três destinos distintos. Os pontos 4, 5 e 6 não têm quantidade de mesas nem destinos presumidos: a tabela usa “A informar” como indicação de pendência, não como três mesas existentes nesses pontos. Destinos podem se repetir em mesas e pontos diferentes. A ordem das mesas é preservada.
+São 51 identificações de shelves. Elas não representam 51 mesas. As nove mesas anteriormente informadas permanecem nos pontos 1 a 3. A divisão anterior por mesa é exibida como referência separada, sem associar destinos às shelves. Nos blocos 4 a 6 a quantidade de mesas aguarda confirmação.
 
-## Visualização
+## Uso
 
-- Cena 3D ampla, com mais separação entre pontos e mesas individuais. Balcões compactos pretos inspirados na referência enviada: leito de pequenos rodízios, chassi metálico aberto, travessas e pés reguláveis. Use Detalhe da mesa para aproximar a primeira mesa do ponto selecionado. Ver tudo enquadra novamente as nove mesas; nenhuma mesa é removida da cena ao aproximar. A abertura padrão é a vista superior geral. Somente os três primeiros pontos têm mobiliário de mesas configurado.
-- Seletor de ponto, vista superior e em perspectiva, mapa 2D, animação visual da esteira e restauração da câmera.
-- Os nomes completos dos destinos ficam em cartões fora da cena, evitando sobreposição de rótulos.
-- No celular, o mapa 2D abre por padrão. O 3D pode ser ativado manualmente.
-- Use Configurar destinos para editar. Cada linha corresponde a uma mesa, na ordem. Repetições são permitidas. Pontos vazios permanecem sem configuração.
-- Mapeamento editado salvo no localStorage, chave versionada. Dados inválidos ou incompatíveis recuperam a divisão informada pelo usuário.
+- Abertura na visão geral. Ver todo o leve restaura o enquadramento. Aproximar bloco muda somente a câmera e funciona também no MG5.
+- As etiquetas azuis identificam shelves; M1/M2/M3 identificam mesas. No MG5, os números pertencem ao grupo MG5 e F1–F6 indicam fileiras.
+- Configurar destinos permite preencher cada shelf individualmente. Campo vazio mantém A confirmar. A edição é salva neste navegador em localStorage, versão 3.
+- Dados antigos da versão 2 são migrados preservando a referência das mesas. Nenhum destino antigo é transferido automaticamente para uma shelf.
+- Mapa 2D por padrão no celular e como fallback do 3D. Cartões completos acessíveis fora da cena; destinos não dependem de cores.
+- A animação é ilustrativa. Sem dimensões reais, volumes ou produtividade presumidos. O volumoso não está neste plano. O Apps Script permanece apenas um link de teste, sem sincronização.
 
-As posições, distâncias e caixas são ilustrativas; não há medida real do galpão, volumes operacionais ou taxas por mesa nesta etapa. Animar a esteira não calcula produtividade, filas ou roteamento de cargas. O site Apps Script permanece um acesso complementar de teste, sem integração de dados.
+## Executar
 
-## Executar e validar
-
-Requer Node.js 22.12+ ou 24.
+Requer Node.js 22.12+ ou 24. Dependências já instaladas nesta cópia.
 
 ~~~powershell
 npm ci
@@ -39,14 +37,14 @@ npm test
 npm run build
 ~~~
 
-Nesta cópia as dependências já estão instaladas; INICIAR.cmd abre o servidor local. O build fica em dist/ e deve ser servido por HTTP.
+## Arquivos principais
 
-## Arquivos
+- src/leveLayout.ts: nomes, fileiras e posições esquemáticas das shelves.
+- src/fishingPoints.ts: mesas, shelves, validação e migração local.
+- src/FishingDashboard.tsx: painel, referência anterior e editor por shelf.
+- src/FishingScene.tsx: visão geral, aproximação, esteira e shelves instanciadas.
+- src/FlowRackTable.tsx: mesas pretas compactas com roletes.
+- src/fishing.css: estilos, contraste e responsividade.
+- src/simulation.test.ts: motor original, configuração das mesas e identificação/persistência das shelves.
 
-- src/FishingDashboard.tsx: tela focada em pesca, seleção, mesas, mapa 2D e editor.
-- src/FishingScene.tsx: esteira, seis áreas, mesas individuais e animação ilustrativa.
-- src/fishingPoints.ts: configuração informada, validação e persistência do mapeamento.
-- src/fishing.css: espaçamento, contraste e responsividade.
-- src/simulation.test.ts: testes do motor anterior e da divisão por mesas.
-
-O motor de expedição e o painel anterior permanecem no código para continuidade futura, sem fazer parte da tela atual. Seus testes foram preservados. Consulte ENTREGA.md para histórico de alterações e validações.
+O motor de expedição anterior permanece no código e seus testes não foram alterados. Não faz parte da tela atual. Histórico e instruções de validação em ENTREGA.md.
