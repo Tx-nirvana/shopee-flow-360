@@ -1,3 +1,4 @@
+import { newSession, replay, recordAction, seek } from './timeline'
 import { bottleneck, turnReport } from './diagnostics'
 import { defaultConfig, validateConfig } from './parameters'
 import { test } from 'node:test'
@@ -76,3 +77,5 @@ test("previsão provável reproduz etapas paralelas e faixa é ordenada",()=>{co
 test("Campinas não recebe falso risco por somar etapas paralelas",()=>{const c=defaultConfig();c.planned=[100,120,40,80,150,125,90,180];const s=initialState(c);assert.equal(forecast(s,s.docks[1],"base"),120);assert.equal(shippingStatus(s,s.docks[1],"base"),"No prazo")})
 
 test("diagnóstico diferencia retenções e registra evidências de atraso",()=>{let s=initialState();s.docks[3].planned=1;s=addIncident(s);assert.equal(bottleneck(s,"base").stage,"doca");s=tick(tick(s,"base"),"base");assert.equal(s.docks[3].delay.doca,1);assert.equal(turnReport(s).delayed.length,1);const before=JSON.stringify(s);tick(s,"base");assert.equal(JSON.stringify(s),before);assert.equal(bottleneck(holdCounter(initialState()),"base").stage,"balcão")})
+
+test("voltar e avançar reproduz estado e intervenções sem duplicidade",()=>{let t=newSession();t=recordAction(t,"priority",5);t=seek(t,15);t=recordAction(t,"counter");t=recordAction(t,"dock");t=seek(t,90);const before=replay(t);assert.deepEqual(replay(seek(seek(t,10),90)),before);const branch=recordAction(seek(t,5),"priority",8);assert.ok(branch.actions.every(a=>a.at<=5));assert.equal(replay(seek(branch,90)).seconds,90);assert.equal(seek(t,-9).minute,0);assert.equal(seek(t,900).minute,720)})
