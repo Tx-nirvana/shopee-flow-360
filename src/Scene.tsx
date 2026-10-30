@@ -1,10 +1,24 @@
-import { Suspense, useRef } from 'react'
+import { Suspense, useRef, useLayoutEffect, memo } from 'react'
 import { Canvas, useFrame } from '@react-three/fiber'
 import { ContactShadows, Html, OrbitControls } from '@react-three/drei'
-import { Group, MathUtils } from 'three'
+import { Group, MathUtils, InstancedMesh, Object3D, BoxGeometry, MeshStandardMaterial } from 'three'
 import type { Dock, Transfer } from './shipping'
 export const colors = {Carregando:'#71d6b1',Aguardando:'#eeb65f',Liberada:'#76818e',Atrasada:'#fa725a',Pronta:'#87baff'}
-function Box({p,s,c,...props}:{p:[number,number,number];s:[number,number,number];c:string;[key:string]:unknown}){return <mesh position={p} castShadow receiveShadow {...props}><boxGeometry args={s}/><meshStandardMaterial color={c} roughness={0.65}/></mesh>}
+const unitBox=new BoxGeometry(1,1,1)
+const materials=new Map<string,MeshStandardMaterial>()
+function material(color:string){if(!materials.has(color))materials.set(color,new MeshStandardMaterial({color,roughness:0.65}));return materials.get(color)!}
+type BoxInstance={p:[number,number,number];s:[number,number,number]}
+function BoxInstances({items,color}:{items:BoxInstance[];color:string}){
+ const ref=useRef<InstancedMesh>(null);useLayoutEffect(()=>{if(!ref.current)return;const dummy=new Object3D();items.forEach((item,i)=>{dummy.position.set(...item.p);dummy.scale.set(...item.s);dummy.updateMatrix();ref.current!.setMatrixAt(i,dummy.matrix)});ref.current.instanceMatrix.needsUpdate=true;ref.current.computeBoundingSphere()},[items]);
+ return <instancedMesh ref={ref} args={[unitBox,material(color),items.length]} castShadow receiveShadow dispose={null}/>
+}
+const rollers:BoxInstance[]=[...Array.from({length:51},(_,i)=>({p:[-14.7+i*0.59,1.15,-16] as [number,number,number],s:[0.11,0.08,1.1] as [number,number,number]})),...Array.from({length:8},(_,i)=>Array.from({length:5},(_,j)=>({p:[(i-3.5)*3.65,1.15,-15.2+j*0.45] as [number,number,number],s:[0.85,0.08,0.08] as [number,number,number]}))).flat()]
+const shutters:BoxInstance[]=Array.from({length:8},(_,i)=>Array.from({length:7},(_,j)=>({p:[(i-3.5)*3.65,0.4+j*0.38,-3.1] as [number,number,number],s:[2.3,0.035,0.04] as [number,number,number]}))).flat()
+const ribs:BoxInstance[]=Array.from({length:11},(_,i)=>({p:[-1.135,1.72,-1.4+i*0.48],s:[0.025,2.4,0.035]}))
+const Rollers=memo(()=> <BoxInstances items={rollers} color="#84939c"/>)
+const Shutters=memo(()=> <BoxInstances items={shutters} color="#768187"/>)
+const TruckRibs=memo(({selected}:{selected:boolean})=> <BoxInstances items={ribs} color={selected?'#d85d26':'#afb5b7'}/>)
+function Box({p,s,c,...props}:{p:[number,number,number];s:[number,number,number];c:string;[key:string]:unknown}){return <mesh position={p} scale={s} geometry={unitBox} material={material(c)} castShadow receiveShadow dispose={null} {...props}/>}
 function Truck({dock,x,selected,onSelect}:{dock:Dock;x:number;selected:boolean;onSelect:()=>void}){
  const ref=useRef<Group>(null); const target=dock.status==='Liberada'?20:1;
  useFrame((_,delta)=>{if(ref.current)ref.current.position.z=MathUtils.damp(ref.current.position.z,target,1.5,Math.min(delta,0.1))});
@@ -14,7 +28,7 @@ function Truck({dock,x,selected,onSelect}:{dock:Dock;x:number;selected:boolean;o
   <Html position={[0,0.15,10.7]} center distanceFactor={44}><button onClick={onSelect} className={`dock-tag ${selected?'selected':''}`}>D{String(dock.id).padStart(2,'0')}<i style={{background:colors[dock.status]}}/></button></Html>
   <group ref={ref} position={[0,0,1]} onClick={e=>{e.stopPropagation();onSelect()}}>
    <Box p={[0,1.72,1]} s={[2.25,2.65,5.5]} c={selected?'#ff783c':dock.id%3===0?'#c3c8ca':'#e2e2dd'}/>
-   {Array.from({length:11},(_,i)=><Box key={i} p={[-1.135,1.72,-1.4+i*0.48]} s={[0.025,2.4,0.035]} c={selected?'#d85d26':'#afb5b7'}/>)}
+   <TruckRibs selected={selected}/>
    <Box p={[0,0.6,2]} s={[2.4,0.35,8]} c="#20272c"/>
    <Box p={[0,1.25,4.9]} s={[2.3,2.1,2.15]} c="#f36a32"/>
    <Box p={[0,1.75,6]} s={[1.95,0.8,0.04]} c="#182d3b"/>
@@ -44,14 +58,14 @@ function InboundParcel({dock,seconds,running,speed,selected}:{dock:Dock;seconds:
 function CounterFlow({docks,selected,onSelect,transfers,seconds,running,speed,counterHeld}:{docks:Dock[];selected:number;onSelect:(n:number)=>void;transfers:Transfer[];seconds:number;running:boolean;speed:number;counterHeld:boolean}){return <>
  {/* Conveyor and its short feeds stay behind the counter. */}
  <Box p={[0,1,-16]} s={[30,0.25,1.2]} c="#38434b"/>
- {Array.from({length:51},(_,i)=><Box key={i} p={[-14.7+i*0.59,1.15,-16]} s={[0.11,0.08,1.1]} c="#84939c"/>)}
+ <Rollers/>
  {[-16.66,-15.34].map(z=><Box key={z} p={[0,1.19,z]} s={[30.2,0.1,0.08]} c="#e6b976"/>)}
  <Html position={[0,2.7,-16.5]} center distanceFactor={48}><div className="conveyor-sign">01 · ESTEIRA DE ENTRADA<small>{docks.reduce((n,d)=>n+d.inbound,0)} VOLUMES A CAMINHO DO BALCÃO</small></div></Html>
  <Box p={[0,0.65,-12.5]} s={[30,1.3,1.7]} c="#38464f"/><Box p={[0,1.36,-12.5]} s={[30.2,0.15,1.9]} c={counterHeld?'#ba5748':'#f07840'}/>
  <Html position={[-16.6,2,-12.5]} center distanceFactor={48}><div className={`counter-sign ${counterHeld?'held':''}`}>02 · BALCÃO<small>{counterHeld?'CONFERÊNCIA ADICIONAL':`${docks.reduce((n,d)=>n+d.pending,0)} VOLUMES PENDENTES`}</small></div></Html>
  {docks.map(d=>{const x=(d.id-4.5)*3.65,active=d.id===selected;return <group key={d.id}>
   <Box p={[x,1,-14.3]} s={[0.9,0.25,2.2]} c="#38434b"/>
-  {Array.from({length:5},(_,i)=><Box key={i} p={[x,1.15,-15.2+i*0.45]} s={[0.85,0.08,0.08]} c="#84939c"/>)}
+  
   <Box p={[x,1.9,-12.9]} s={[0.95,0.8,0.12]} c="#21303b"/><Box p={[x,1.9,-12.81]} s={[0.8,0.6,0.02]} c={counterHeld?'#ba5748':'#6cb5b5'}/>
   {d.pending>0&&<Box p={[x+0.9,1.75,-12.4]} s={[0.55,0.65,0.55]} c="#d8ae7c"/>}
   <group onClick={e=>{e.stopPropagation();onSelect(d.id)}}>
@@ -74,13 +88,13 @@ function Warehouse(props:SceneProps){const {docks,selected,onSelect}=props;retur
  <Box p={[0,-0.25,-2]} s={[39,0.5,36]} c="#535c60"/>
  <Box p={[0,2,-18]} s={[32,4,0.3]} c="#69777f"/>
  <Box p={[0,4,-18]} s={[32,0.2,0.5]} c="#f07840"/>
- <CounterFlow {...props}/>
+ <CounterFlow {...props}/><Shutters/>
  <Box p={[0,3.9,-3.4]} s={[31.8,0.65,0.18]} c="#f36a32"/>
  <Html position={[-11,4,-3.25]} distanceFactor={45} center><div className="building-sign">SHOPEE <span>EXPEDIÇÃO</span></div></Html>
  {docks.map(d=>{const x=(d.id-4.5)*3.65;return <group key={d.id}>
   <Box p={[x,1.7,-3.4]} s={[2.9,3.2,0.2]} c="#272f35"/>
   <Box p={[x,1.55,-3.23]} s={[2.35,2.75,0.2]} c="#4a555b"/>
-  {Array.from({length:7},(_,i)=><Box key={i} p={[x,0.4+i*0.38,-3.1]} s={[2.3,0.035,0.04]} c="#768187"/>)}
+  
   <Box p={[x,3.38,-3.12]} s={[2.8,0.08,0.06]} c={colors[d.status]}/>
   <Truck dock={d} x={x} selected={selected===d.id} onSelect={()=>onSelect(d.id)}/>
  </group>})}
@@ -89,7 +103,9 @@ function Warehouse(props:SceneProps){const {docks,selected,onSelect}=props;retur
  {[-16,16].flatMap(x=>[0,2,4,6,8].map(z=><mesh key={`${x}-${z}`} position={[x,0.35,z]}><coneGeometry args={[0.22,0.7,8]}/><meshStandardMaterial color="#ff843d"/></mesh>))}
  <ContactShadows position={[0,0.01,0]} opacity={0.35} scale={65} blur={2.5} far={20}/>
  </>}
-export default function Scene(props:SceneProps){return <Canvas key={props.view} shadows dpr={[1,1.6]} camera={{position:props.view%2===0?[32,36,38]:[0,49,8],fov:48}} gl={{antialias:true}} fallback={<div className="canvas-fallback">WebGL indisponível. Use a programação abaixo para acompanhar a operação.</div>}>
+function Scene(props:SceneProps){return <Canvas key={props.view} shadows dpr={[1,1.6]} camera={{position:props.view%2===0?[32,36,38]:[0,49,8],fov:48}} gl={{antialias:true}} fallback={<div className="canvas-fallback">WebGL indisponível. Use a programação abaixo para acompanhar a operação.</div>}>
  <color attach="background" args={['#1e252a']}/><fog attach="fog" args={['#1e252a',55,110]}/><ambientLight intensity={1.8}/><hemisphereLight args={['#cfdfed','#414b53',1.8]}/><directionalLight position={[8,25,12]} intensity={3} castShadow shadow-mapSize={[2048,2048]} shadow-camera-left={-30} shadow-camera-right={30} shadow-camera-top={30} shadow-camera-bottom={-30}/>
  <Suspense fallback={null}><Warehouse {...props}/></Suspense><OrbitControls makeDefault target={[0,0.5,-2]} minDistance={22} maxDistance={78} maxPolarAngle={Math.PI/2.2} autoRotate={props.autoRotate} autoRotateSpeed={0.5}/>
  </Canvas>}
+
+export default memo(Scene)
