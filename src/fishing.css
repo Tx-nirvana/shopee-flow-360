@@ -19,3 +19,5 @@
 @media(max-width:760px){.fish-overview{gap:18px}.fish-overview>div+div{padding-left:18px}.fish-overview span{white-space:normal;font-size:11px;line-height:1.5}.fish-selected-destinations .fish-table-list{grid-template-columns:1fr}.fish-selected-destinations .fish-table-list li{flex-direction:row}.fish-mini-tables{gap:4px}.fish-mini-tables>span{min-width:20px;height:24px;font-size:10px}.fish-map-stations button{min-height:174px}.fish-table-list li{padding:12px;gap:10px}}
 
 .fish-mini-tables>span,.selected .fish-mini-tables>span{background:repeating-linear-gradient(0deg,#30393f 0px,#30393f 2px,#101619 2px,#101619 5px);color:#edf4f8;border-color:#748b9b}.selected .fish-mini-tables>span{border-color:#efbc89}.fish-scene-tools button:disabled{opacity:.45;cursor:not-allowed}
+
+.fish-scene-tools .fish-show-all{background:#edb77c;color:#201a15;border-color:#ffcf99;font-weight:650}.fish-table-marker{font-size:13px;padding:4px 7px}.fish-scene-tools .fish-show-all:hover{background:#ffd3a4}

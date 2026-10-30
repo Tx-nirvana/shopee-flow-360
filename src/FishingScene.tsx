@@ -68,8 +68,11 @@ function FitCamera({ top, detail, selected }: {
             invalidate();
             return;
         }
+        const aspect = Math.max(size.width, 1) / Math.max(size.height, 1);
+        const tangent = Math.tan(47 * Math.PI / 360);
+        const overviewHeight = Math.max(88 * 1.12 / (2 * tangent * aspect), 26 * 1.2 / (2 * tangent));
         const factor = Math.max(1, size.height / Math.max(size.width, 1) * 1.8);
-        camera.position.set(top ? 0 : 25 * factor, top ? 69 * factor : 43 * factor, top ? 1.1 : 53 * factor);
+        camera.position.set(top ? 0 : 25 * factor, top ? overviewHeight : 43 * factor, top ? 1.1 : 53 * factor);
         camera.lookAt(0, 0, 1);
         invalidate();
     }, [camera, size.width, size.height, top, detail, selected, invalidate]);
@@ -82,10 +85,10 @@ function Layout({ points, selected, onSelect, animate, detail }: {
     animate: boolean;
     detail: boolean;
 }) {
-    const tables = useMemo(() => points.flatMap((point, i) => point.tables.filter((_, index) => !detail || (point.id === selected && index === 0)).map((_, index) => ({
+    const tables = useMemo(() => points.flatMap((point, i) => point.tables.map((_, index) => ({
         x: positions[i] + ((index % 3) - 1) * 3.25,
         z: 3.4 + Math.floor(index / 3) * 3.1,
-    }))), [points, detail, selected]);
+    }))), [points]);
     return <>
         <Box p={[0, -0.25, 1.5]} s={[88, 0.5, 26]} c="#44525b"/>
         <Box p={[0, 1.33, -3.2]} s={[81, 0.4, 2.2]} c="#26353f"/>
@@ -95,17 +98,15 @@ function Layout({ points, selected, onSelect, animate, detail }: {
         <Parcels animate={animate}/>
         <FlowRackRollers tables={tables} />
         {positions.map((x, i) => {
-            if (detail && selected !== i + 1) return null;
             const id = i + 1, active = selected === id, point = points[i];
             return <group key={id} onClick={e => { e.stopPropagation(); onSelect(id); }}>
                 <Box p={[x, 0.03, 3.5]} s={[10.8, 0.05, 10]} c={active ? '#67513d' : '#35434d'}/>
                 {[-5.45, 5.45].map(offset => <Box key={offset} p={[x + offset, 0.07, 3.5]} s={[0.06, 0.05, 10]} c={active ? '#ffba77' : '#8a9c98'}/>)}
                 {point.tables.map((table, index) => {
-                    if (detail && index !== 0) return null;
                     const tx = x + ((index % 3) - 1) * 3.25, tz = 3.4 + Math.floor(index / 3) * 3.1;
                     return <group key={table.id}>
                         <FlowRackTable x={tx} z={tz} />
-                        {active && !detail && <Html position={[tx, 1.3, tz - 0.5]} center distanceFactor={28}><span className="fish-table-marker" title={table.destination}>M{table.id}</span></Html>}
+                        {!detail && <Html position={[tx, 1.3, tz - 0.5]} center distanceFactor={28}><span className="fish-table-marker" aria-label={`Ponto ${id}, mesa ${table.id}: ${table.destination}`} title={table.destination}>M{table.id}</span></Html>}
                     </group>;
                 })}
                 {!detail && <Html position={[x, 0.3, 8.1]} center distanceFactor={36}><button className={`fish-scene-number ${active ? 'selected' : ''}`} onClick={() => onSelect(id)} aria-label={`Selecionar ponto de pesca ${id}`} aria-pressed={active}>{String(id).padStart(2, '0')}</button></Html>}

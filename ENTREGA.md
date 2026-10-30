@@ -73,3 +73,7 @@ Arquivos: App.tsx, FishingDashboard.tsx, FishingScene.tsx, fishingPoints.ts, fis
 As mesas passaram a usar o modelo de flow rack mostrado na referência, em proporção compacta e acabamento preto. Cada mesa tem sete canais de pequenos rodízios, chassi aberto, travessas e pés reguláveis. A seleção mantém a mesa preta e destaca a área no piso. Os monitores fictícios foram removidos. A vista Detalhe da mesa isola a primeira mesa do ponto selecionado para inspeção; Voltar ao layout restaura a visão completa. Medidas e inclinação são ilustrativas, pois não foram informadas dimensões reais.
 
 Arquivos: FlowRackTable.tsx, FishingScene.tsx, FishingDashboard.tsx e fishing.css. Componentes de rodízios e trilhos usam instâncias para reduzir chamadas de desenho. Nenhuma associação ponto/mesa/destino ou regra do motor foi alterada. Verificação: testes existentes, TypeScript/build, vista de perto, retorno ao layout e persistência visual do acabamento preto.
+
+## Visão geral e quantidade de mesas
+
+A tela abre na visão superior enquadrando todos os seis pontos e nove mesas informadas (3 + 3 + 3). O botão Ver tudo restaura o enquadramento completo. A aproximação de detalhe altera somente a câmera: nenhum ponto, mesa, rodízio ou trilho é filtrado da cena. Na visão geral, todas as nove mesas recebem identificação M1/M2/M3. A indicação de quantidade fica junto aos controles da cena.
