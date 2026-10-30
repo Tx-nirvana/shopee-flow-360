@@ -1,3 +1,4 @@
+import { loadSession, saveSession } from './persistence'
 import { newSession, replay, seek, recordAction, type Intervention } from './timeline'
 import { bottleneck } from './diagnostics'
 import TurnSummary from './TurnSummary'
@@ -11,7 +12,10 @@ const dockName=(id:number)=>String(id).padStart(2,'0')
 function Badge({s,d,scenario}:{s:Simulation;d:Dock;scenario:Scenario}){const status=shippingStatus(s,d,scenario);return <span className={`shipping-badge ${status==='Atrasada'||status==='Saiu atrasado'?'late':status==='Em risco'?'risk':status==='Pronta'||status==='Saiu no prazo'?'good':'normal'}`}><i/>{status}</span>}
 class SceneBoundary extends Component<{children:ReactNode},{failed:boolean}>{state={failed:false};static getDerivedStateFromError(){return {failed:true}}render(){return this.state.failed?<div className="canvas-fallback">O 3D não está disponível neste dispositivo. A programação e todos os controles continuam acessíveis nos painéis.</div>:this.props.children}}
 export default function ShippingDashboard(){
- const [session,setSession]=useState(()=>newSession()),[running,setRunning]=useState(false),[selected,setSelected]=useState(2),[tab,setTab]=useState('shipping'),[view,setView]=useState(0),[rotate,setRotate]=useState(false),[present,setPresent]=useState(false),[help,setHelp]=useState(false),[filter,setFilter]=useState('all');
+ const [restored]=useState(()=>loadSession());
+ const [saveError,setSaveError]=useState('');
+ const [session,setSession]=useState(restored.session),[running,setRunning]=useState(false),[selected,setSelected]=useState(2),[tab,setTab]=useState('shipping'),[view,setView]=useState(0),[rotate,setRotate]=useState(false),[present,setPresent]=useState(false),[help,setHelp]=useState(false),[filter,setFilter]=useState('all');
+ useEffect(()=>{setSaveError(saveSession(session))},[session]);
  const sim=useMemo(()=>replay(session),[session]),scenario=session.scenario,speed=session.speed;
  const act=(type:Intervention['type'],id?:number)=>setSession(s=>recordAction(s,type,id));
  const resetSession=(config=sim.config,key:Scenario=scenario)=>{setSession(newSession(config,key));setRunning(false)};
@@ -21,13 +25,14 @@ export default function ShippingDashboard(){
  const pressure=bottleneck(sim,scenario);
  const ranges=forecastRanges(sim,scenario),estimate=ranges[selected];
  const reset=()=>resetSession();
- const applyScenario=(key:Scenario)=>{setScenario(key);setSim(initialState());setRunning(true)};
+ const applyScenario=(key:Scenario)=>resetSession(sim.config,key);
  const due=sim.docks.filter(d=>d.planned<=sim.seconds).length;
  const filtered=ordered.filter(d=>filter==='all'||filter==='risk'&&['Em risco','Atrasada','Saiu atrasado'].includes(shippingStatus(sim,d,scenario))||filter==='counter'&&d.pending>0);
  return <div className={`app ${present?'presentation':''}`}>
  {!present&&<aside className="sidebar"><a href="#" className="brand-icon" aria-label="Shopee Flow 360"><Box size={28}/></a><div className="rail-line"/>{[{id:'shipping',icon:LayoutDashboard,label:'Shipping Diário'},{id:'compare',icon:GitCompareArrows,label:'Comparar cenários'},{id:'parameters',icon:ScanLine,label:'Parâmetros'},{id:'events',icon:Activity,label:'Eventos'}].map(item=><button key={item.id} title={item.label} aria-label={item.label} className={tab===item.id?'active':''} onClick={()=>setTab(item.id)}><item.icon size={21}/></button>)}<div className="rail-bottom"><button aria-label="Como usar" onClick={()=>setHelp(true)}><CircleHelp size={21}/></button><div className="avatar">OP</div></div></aside>}
  <div className="workspace"><header><div className="wordmark">SHOPEE <span>FLOW</span> <b>360</b><small>SHIPPING DAILY CONTROL</small></div><div className="header-right"><span className="demo-badge"><i/> DADOS FICTÍCIOS · SEM INTEGRAÇÃO</span><button className="presentation-btn" onClick={()=>setPresent(p=>!p)}><Expand size={15}/>{present?'Sair da apresentação':'Modo apresentação'}</button></div></header>
  <main>
+ {(saveError||restored.note)&&<p className="storage-note" role="status">{saveError||restored.note}</p>}
  <div className="page-heading"><div><div className="eyebrow">SHIPPING DIÁRIO <span className="day-label">29 OUT 2026 · DIA DEMONSTRATIVO</span></div><h1>O plano do dia. O fluxo em movimento.</h1><p>Da esteira à saída do caminhão: veja o previsto, o realizado e o que precisa de atenção.</p></div><div className="hub"><span className="hub-icon"><ScanLine size={20}/></span><div><b>CD demonstrativo · Turno demonstrativo</b><small>8 saídas · 08h às 20h · {settings[scenario].label}</small></div><span className="live"><i/>{finished?'CONCLUÍDO':isRunning?'SIMULANDO':'PAUSADO'}</span></div></div>
  <nav className="tabs"><button className={tab==='shipping'?'active':''} onClick={()=>setTab('shipping')}><LayoutDashboard size={15}/>Shipping Diário</button><button className={tab==='compare'?'active':''} onClick={()=>setTab('compare')}><GitCompareArrows size={16}/>Comparar cenários</button><button className={tab==='events'?'active':''} onClick={()=>setTab('events')}><Activity size={16}/>Eventos <span>{sim.events.length}</span></button><button className={tab==='parameters'?'active':''} onClick={()=>setTab('parameters')}>Parâmetros</button><div className="sim-clock"><Clock3 size={14}/>{clock(sim.seconds)}<span>· horário simulado</span></div></nav>
  <section className="kpis">{[

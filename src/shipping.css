@@ -10,3 +10,5 @@
 .forecast-range{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:16px;font-size:12px;color:#bbc9d3}.forecast-range b{display:block;color:#f3f6f8;margin-top:5px}.forecast-range{grid-column:1/-1}
 
 .bottleneck-banner{display:flex;align-items:center;gap:12px;border:1px solid #dbab74;background:#30271f;padding:16px;border-radius:8px;margin-bottom:16px}.bottleneck-banner strong{font-size:16px;color:#ffe0b7}.bottleneck-banner p,.turn-summary p{font-size:14px;color:#cad5df}.bottleneck-stage{outline:2px solid #ffd59d;outline-offset:6px;border-radius:4px}.turn-summary{padding:22px;margin-bottom:20px}.turn-summary h2{font-size:24px;margin-bottom:12px}.turn-summary li{font-size:14px;line-height:1.8;margin:12px 0}
+
+.storage-note{font-size:14px;color:#d5e4ef;padding:12px;border:1px solid #698195;border-radius:6px;margin-bottom:16px}
