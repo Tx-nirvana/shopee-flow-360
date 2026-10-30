@@ -1,7 +1,9 @@
 import { defaultConfig, cloneConfig, validateConfig, type SimulationConfig } from './parameters'
 export type Status = 'Carregando' | 'Aguardando' | 'Liberada' | 'Atrasada' | 'Pronta'
 export type Scenario = 'base' | 'optimized' | 'peak'
-export type Dock = { id:number; route:string; truck:string; progress:number; status:Status; loaded:number; capacity:number; inbound:number; pending:number; staged:number; planned:number; departedAt:number|null }
+export type Stage = 'esteira' | 'balcão' | 'rua' | 'doca'
+export type DelayEvidence=Record<Stage,number>
+export type Dock = { delay:DelayEvidence; id:number; route:string; truck:string; progress:number; status:Status; loaded:number; capacity:number; inbound:number; pending:number; staged:number; planned:number; departedAt:number|null }
 export type Transfer = { id:number; dockId:number; volumes:number; started:number; arrives:number }
 export type SimEvent = { id:number; time:number; title:string; detail:string; kind:'success'|'warning'|'info' }
 export type Simulation = { config:SimulationConfig; seconds:number; docks:Dock[]; shipped:number; departures:number; events:SimEvent[]; incidentUntil:number; counterUntil:number; transfers:Transfer[]; checked:number; priority:number|null; nextId:number }
@@ -12,10 +14,10 @@ export const clock=(minutes:number)=>!Number.isFinite(minutes)?'Sem conclusão':
 export function initialState(config:SimulationConfig=defaultConfig()):Simulation{
  const errors=validateConfig(config);if(errors.length)throw new Error(errors.join(" "));
  const loads=[544,336,728,184,0,448,120,0],staged=[160,240,12,200,80,160,120,80];
- return {config:cloneConfig(config),seconds:0,shipped:0,departures:0,incidentUntil:0,counterUntil:0,checked:0,priority:null,nextId:1,transfers:[],events:[{id:0,time:0,title:'Shipping Diário iniciado',detail:'Esteira → balcão → ruas (stage out) → caminhões → expedidos · volumes fictícios',kind:'info'}],docks:routes.map((route,i)=>({id:i+1,route,truck:`SHP-${2401+i*17}`,progress:Math.floor(loads[i]*config.capacities[i]/800)/config.capacities[i]*100,status:loads[i]?'Carregando':'Aguardando',loaded:Math.floor(loads[i]*config.capacities[i]/800),capacity:config.capacities[i],inbound:Math.max(0,config.capacities[i]-Math.floor(loads[i]*config.capacities[i]/800)-Math.floor(staged[i]*config.capacities[i]/800)-Math.floor(80*config.capacities[i]/800)),pending:Math.min(Math.floor(80*config.capacities[i]/800),config.capacities[i]-Math.floor(loads[i]*config.capacities[i]/800)-Math.floor(staged[i]*config.capacities[i]/800)),staged:Math.floor(staged[i]*config.capacities[i]/800),planned:config.planned[i],departedAt:null}))}
+ return {config:cloneConfig(config),seconds:0,shipped:0,departures:0,incidentUntil:0,counterUntil:0,checked:0,priority:null,nextId:1,transfers:[],events:[{id:0,time:0,title:'Shipping Diário iniciado',detail:'Esteira → balcão → ruas (stage out) → caminhões → expedidos · volumes fictícios',kind:'info'}],docks:routes.map((route,i)=>({delay:{esteira:0,'balcão':0,rua:0,doca:0},id:i+1,route,truck:`SHP-${2401+i*17}`,progress:Math.floor(loads[i]*config.capacities[i]/800)/config.capacities[i]*100,status:loads[i]?'Carregando':'Aguardando',loaded:Math.floor(loads[i]*config.capacities[i]/800),capacity:config.capacities[i],inbound:Math.max(0,config.capacities[i]-Math.floor(loads[i]*config.capacities[i]/800)-Math.floor(staged[i]*config.capacities[i]/800)-Math.floor(80*config.capacities[i]/800)),pending:Math.min(Math.floor(80*config.capacities[i]/800),config.capacities[i]-Math.floor(loads[i]*config.capacities[i]/800)-Math.floor(staged[i]*config.capacities[i]/800)),staged:Math.floor(staged[i]*config.capacities[i]/800),planned:config.planned[i],departedAt:null}))}
 }
 function event(s:Simulation,title:string,detail:string,kind:SimEvent['kind']='info'){s.events=[{id:s.nextId++,time:s.seconds,title,detail,kind},...s.events].slice(0,40)}
-function copy(s:Simulation):Simulation{return {...s,docks:s.docks.map(d=>({...d})),transfers:s.transfers.map(t=>({...t})),events:[...s.events]}}
+function copy(s:Simulation):Simulation{return {...s,docks:s.docks.map(d=>({...d,delay:{...d.delay}})),transfers:s.transfers.map(t=>({...t})),events:[...s.events]}}
 export function prioritize(s:Simulation,dockId:number):Simulation{const d=s.docks.find(d=>d.id===dockId);if(!d||d.departedAt!==null||d.pending+d.inbound===0||s.priority===dockId)return s;const next=copy(s);next.priority=dockId;event(next,`Balcão prioriza rua ${String(dockId).padStart(2,'0')}`,`${d.route} · conferência antecipada dentro da capacidade do balcão`);return next}
 export function addIncident(s:Simulation):Simulation{if(s.incidentUntil>s.seconds||s.docks[3].departedAt!==null)return s;const next=copy(s);next.incidentUntil=s.seconds+60;next.docks[3].status='Atrasada';event(next,'Retenção na doca 04','Carregamento suspenso por 60 min simulados','warning');return next}
 export function holdCounter(s:Simulation):Simulation{if(s.counterUntil>s.seconds||s.docks.every(d=>d.pending+d.inbound===0))return s;const next=copy(s);next.counterUntil=s.seconds+20;event(next,'Balcão em conferência adicional','Novos volumes retidos por 20 min; cargas nas ruas continuam para os caminhões','warning');return next}
@@ -51,6 +53,7 @@ export function tick(s:Simulation,scenario:Scenario,afterTurn=false):Simulation{
  for(const d of ordered){const count=Math.min(budget,d.pending);if(count<=0)continue;d.pending-=count;budget-=count;next.checked+=count;next.transfers.push({id:next.nextId++,dockId:d.id,volumes:count,started:now,arrives:now+next.config.transferMinutes});if(d.pending+d.inbound===0){event(next,`Balcão concluiu ${d.route.split(' · ')[0]}`,`Rua ${String(d.id).padStart(2,'0')} · últimos volumes a caminho do stage out`,'success');if(next.priority===d.id)next.priority=null}}
  for(const d of next.docks){
   if(d.departedAt!==null)continue;
+  if(now>d.planned){const stage:Stage=d.id===4&&now<next.incidentUntil?'doca':now<next.counterUntil&&d.pending+d.inbound>0?'balcão':d.staged>0?'doca':d.pending>0?'balcão':d.inbound>0?'esteira':'rua';d.delay[stage]++;}
   if(d.id===4&&now<next.incidentUntil){d.status='Atrasada'}else{
    const amount=Math.min(d.staged,d.capacity-d.loaded,Math.max(1,s.config.dockRates[d.id-1]));
    d.staged-=amount;d.loaded+=amount;d.progress=d.loaded/d.capacity*100;
