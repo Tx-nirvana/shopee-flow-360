@@ -59,3 +59,11 @@ O último comando mede cobertura dos módulos importados pelos testes do motor; 
 - Cobertura dos módulos exercitados: 97,08% linhas, 91,11% ramificações e 89,74% funções. shipping.ts: 100% linhas, 95,38% ramificações e 100% funções. Não inclui cobertura de telas ou WebGL.
 - git diff --check: sem erros de whitespace.
 - Build executado fora do sandbox após EPERM de realpath na primeira tentativa; nenhuma proteção ou configuração do projeto foi removida.
+
+## Atualização de 30/10/2026 — Esteira, pontos de pesca e mesas
+
+A tela principal agora foca somente em esteira e balcão. Seis pontos separados, com nove mesas informadas nos pontos 1, 2 e 3. Pontos 4–6 ficam sem quantidade de mesas ou destinos presumidos. P1: BETIM / CONTAGEM_INDUSTRIAL / BETIM; P2: três SP_GUARULHOS; P3: três BETIM (códigos SOC_ completos preservados no código e na interface).
+
+Destinos repetidos são permitidos e cada mesa permanece um registro individual. O layout 3D mostra somente mobiliário configurado; números de mesas e nomes completos aparecem separadamente dos objetos para evitar sobreposição. Mapa 2D por padrão no celular, edição local por linha/mesa e recuperação segura do mapeamento. Nenhum volume, capacidade por mesa ou taxa operacional foi inventado. A animação de caixas é apenas visual.
+
+Arquivos: App.tsx, FishingDashboard.tsx, FishingScene.tsx, fishingPoints.ts, fishing.css e simulation.test.ts. Testar seleção de pontos 1–6, repetição de SOC_BETIM, três mesas de Guarulhos, pontos sem configuração, salvar/recarregar e vista 2D em 390 px. Os 30 testes anteriores foram mantidos e quatro testes de configuração de mesas foram adicionados: total de 34 aprovados. TypeScript e Vite aprovados.
