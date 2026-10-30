@@ -64,3 +64,5 @@ test('prioridade permanece ativa enquanto ainda há volumes do destino na esteir
 
 
 test("turno termina às 20h sem descartar volumes pendentes",()=>{const s=initialState();s.seconds=720;assert.equal(tick(s,"base"),s);assert.equal(clock(s.seconds),"20:00")})
+
+test("cenários isolam a capacidade do balcão",()=>{assert.equal(settings.base.rate,settings.optimized.rate);assert.equal(settings.base.rate,settings.peak.rate);const s=initialState();const a=tick(s,"base"),b=tick(s,"optimized");assert.equal(a.docks[0].loaded,b.docks[0].loaded);assert.equal(a.checked,36);assert.equal(b.checked,56)})

@@ -5,7 +5,7 @@ export type Transfer = { id:number; dockId:number; volumes:number; started:numbe
 export type SimEvent = { id:number; time:number; title:string; detail:string; kind:'success'|'warning'|'info' }
 export type Simulation = { seconds:number; docks:Dock[]; shipped:number; departures:number; events:SimEvent[]; incidentUntil:number; counterUntil:number; transfers:Transfer[]; checked:number; priority:number|null; nextId:number }
 export const routes=['São Paulo · SP','Campinas · SP','Curitiba · PR','Rio de Janeiro · RJ','Belo Horizonte · MG','Sorocaba · SP','Ribeirão Preto · SP','Santos · SP']
-export const settings={base:{label:'Operação atual',rate:0.65,checking:36},optimized:{label:'Fluxo otimizado',rate:0.94,checking:56},peak:{label:'Balcão sobrecarregado',rate:0.55,checking:18}}
+export const settings={base:{label:'Operação atual',rate:0.65,checking:36},optimized:{label:'Fluxo otimizado',rate:0.65,checking:56},peak:{label:'Balcão sobrecarregado',rate:0.65,checking:18}}
 export const TURN_MINUTES=720
 export const clock=(minutes:number)=>`${String((8+Math.floor(minutes/60))%24).padStart(2,'0')}:${String(minutes%60).padStart(2,'0')}`
 export function initialState():Simulation{
