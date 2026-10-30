@@ -1,4 +1,4 @@
-import { leveTablePositions } from './leveLayout';
+import { leveTablePositions, leveSackPositions } from './leveLayout';
 import { compareScenarios, comparisonCSV } from './comparison';
 import { parseSession, loadSession, saveSession, STORAGE_KEY } from './persistence';
 import { newSession, replay, recordAction, seek } from './timeline';
@@ -229,14 +229,19 @@ test('destino por shelf persiste independentemente do nome e das mesas', () => {
 });
 
 
-test('cada identificação do leve gera uma única mesa, sem duplicar a referência anterior', () => {
+test('ilhas 1 a 5 geram mesas e ilha 6 gera somente suportes de saca, sem duplicação', () => {
     const points = defaultFishingPoints();
-    const positions = leveTablePositions(points);
+    const tables = leveTablePositions(points), supports = leveSackPositions(points);
+    assert.equal(tables.length, 14);
+    assert.equal(supports.length, 37);
+    assert.equal(leveTablePositions([points[5]]).length, 0);
+    assert.equal(leveSackPositions(points.slice(0,5)).length, 0);
+    const positions = [...tables,...supports];
     assert.equal(positions.length, 51);
     assert.equal(new Set(positions.map(p => p.x + ':' + p.z)).size, 51);
     assert.equal(leveTablePositions(points.slice(0,3)).length, 9);
     points[0].tables.push({id:4,destination:'REFERENCIA_APENAS'});
-    assert.equal(leveTablePositions(points).length, 51);
+    assert.equal(leveTablePositions(points).length, 14);
     for (const a of positions) for (const b of positions) {
         if (a === b) continue;
         assert.ok(Math.abs(a.x - b.x) >= 1.79 || Math.abs(a.z - b.z) >= 2.96, 'mesas não se sobrepõem');

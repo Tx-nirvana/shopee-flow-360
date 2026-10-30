@@ -31,7 +31,12 @@ export function shelfLocation(pointId: number, shelf: LeveShelf) {
         : { x: block.x + (shelf.position - 2) * 3.6, z: 2.4 };
 }
 
-/** Cada identificação corresponde a uma mesa; a referência antiga não cria móveis extras. */
+/** Ilhas 1–5 usam mesas; ilha 6 usa exclusivamente suportes de saca. */
 export function leveTablePositions(points: { id: number; shelves: LeveShelf[] }[]) {
-    return points.flatMap(point => point.shelves.map(shelf => shelfLocation(point.id, shelf)));
+    return points.filter(point => point.id !== 6).flatMap(point => point.shelves.map(shelf => shelfLocation(point.id, shelf)));
 }
+
+export function leveSackPositions(points: { id: number; shelves: LeveShelf[] }[]) {
+    return points.filter(point => point.id === 6).flatMap(point => point.shelves.map(shelf => shelfLocation(point.id, shelf)));
+}
+export function equipmentLabel(pointId: number) { return pointId === 6 ? 'suportes de saca' : 'mesas'; }

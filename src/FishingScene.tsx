@@ -2,8 +2,9 @@ import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'rea
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { Billboard, ContactShadows, OrbitControls } from '@react-three/drei';
 import type { FishingPoint } from './fishingPoints';
-import { LEVE_BLOCKS, shelfLocation, leveTablePositions } from './leveLayout';
+import { LEVE_BLOCKS, shelfLocation, leveTablePositions, leveSackPositions } from './leveLayout';
 import { FlowRackTables, FlowRackRollers } from './FlowRackTable';
+import SackSupports from './SackSupport';
 import { BoxGeometry, CanvasTexture, Group, InstancedMesh, MeshStandardMaterial, Object3D, SRGBColorSpace } from 'three';
 const geometry = new BoxGeometry(1, 1, 1);
 const materialCache = new Map<string, MeshStandardMaterial>();
@@ -105,6 +106,7 @@ function Layout({ points, selected, onSelect, animate }: {
     animate: boolean;
 }) {
     const tables = useMemo(() => leveTablePositions(points), [points]);
+    const supports = useMemo(() => leveSackPositions(points), [points]);
     return <>
         <Box p={[3, -0.25, 14]} s={[116, 0.5, 46]} c="#44525b"/>
         <Box p={[3, 1.33, -3.2]} s={[111, 0.4, 2.2]} c="#26353f"/>
@@ -114,6 +116,7 @@ function Layout({ points, selected, onSelect, animate }: {
         <Parcels animate={animate}/>
         <FlowRackRollers tables={tables} />
         <FlowRackTables tables={tables}/>
+        <SackSupports positions={supports}/>
         {positions.map((x, i) => {
             const id = i + 1, active = selected === id, point = points[i];
             return <group key={id} onClick={e => { e.stopPropagation(); onSelect(id); }}>
@@ -121,7 +124,7 @@ function Layout({ points, selected, onSelect, animate }: {
                 {[-LEVE_BLOCKS[i].width / 2, LEVE_BLOCKS[i].width / 2].map(offset => <Box key={offset} p={[x + offset, 0.07, 14.8]} s={[0.06, 0.05, 35]} c={active ? '#ffba77' : '#8a9c98'}/>)}
                 {point.shelves.map(shelf => { const p = shelfLocation(id, shelf); return <SceneBadge key={shelf.id} label={id === 6 ? shelf.name.replace('MG5-', '') : shelf.name} position={[p.x, 1.5, p.z - 0.4]} shelf width={id === 6 ? 2.8 : 3.4}/>; })}
                 {id === 6 && [1,2,3,4,5,6].map(row => <SceneBadge key={row} label={'F' + row} position={[x + (row - 3.5) * 5, 0.3, -0.6]} width={2.8}/>)}
-                <SceneBadge label={id === 6 ? '06 · MG5' : 'BLOCO ' + id} position={[x, 0.3, 33]} active={active} width={5.5}/>
+                <SceneBadge label={id === 6 ? '06 · MG5' : 'ILHA ' + id} position={[x, 0.3, 33]} active={active} width={5.5}/>
             </group>;
         })}
         <ContactShadows position={[0, 0.01, 1]} opacity={0.35} scale={120} blur={2.2} far={16} frames={1}/>

@@ -99,3 +99,12 @@ Arquivos: leveLayout.ts, FishingScene.tsx, FlowRackTable.tsx, FishingDashboard.t
 Como testar: observar os blocos 1–3, cada um com somente três mesas e nenhuma estante atrás; conferir blocos 4/5 com duas/três mesas; aproximar MG5 e conferir 37 mesas em seis fileiras; voltar a Ver todo o leve. As etiquetas com MG4, MG2 e demais nomes pertencem diretamente às mesas. Destinos pendentes continuam A confirmar. O volumoso permanece fora desta tela.
 
 Validação: 38 testes aprovados, incluindo novo teste de uma mesa por identificação, sem duplicação pela referência anterior e sem sobreposição. Testes existentes preservados. TypeScript e build Vite aprovados. Verificação visual de visão geral, aproximação e ausência das estantes.
+
+
+## Ilha 6 — exclusivamente suportes de saca
+
+A ilha 6 (MG5) usa suportes de saca em todas as suas 37 posições, conforme correção do usuário. As ilhas 1–5 mantêm suas 14 mesas de roletes. Contadores, mapa, cartões, editor e cena distinguem os dois tipos. A posição, os nomes, as seis fileiras e os destinos salvos não foram alterados. O suporte 3D é esquemático: estrutura aberta com saca ilustrativa, sem tampo, prateleiras ou roletes.
+
+Arquivos: SackSupport.tsx (novo modelo instanciado), leveLayout.ts (separação dos tipos), FishingScene.tsx, FishingDashboard.tsx, simulation.test.ts e README.md. O teste que antes esperava 51 mesas foi atualizado porque a regra física mudou intencionalmente: agora espera 14 mesas e 37 suportes e garante que nenhuma mesa é gerada na ilha 6. Mantida a contagem de 51 posições, sem duplicação ou sobreposição.
+
+Como testar: selecionar Ilha 6/MG5 e Aproximar ilha; conferir estrutura aberta com sacas em seis fileiras e ausência de mesas/roletes. Voltar à visão geral e conferir que ilhas 1–5 continuam com mesas pretas. Conferir painel: 14 mesas + 37 suportes. Nomes e destinos por posição permanecem independentes. Resultado: 38 testes aprovados; TypeScript e build Vite aprovados.
