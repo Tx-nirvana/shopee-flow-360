@@ -1,6 +1,6 @@
 # Entrega · Shopee Flow 360
 
-Implementação local a partir do commit f9194fb. Sem alteração de dados reais, backend, site Apps Script ou publicação externa. As melhorias estão em commits separados no Git local.
+Implementação a partir do commit f9194fb, publicada no GitHub e em hospedagem Sites privada. Sem alteração de dados reais, backend ou site Apps Script. As melhorias permanecem em commits separados.
 
 ## Alterações e como testar
 

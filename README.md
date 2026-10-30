@@ -74,3 +74,11 @@ Consulte **ENTREGA.md** para o que mudou, motivo, arquivos e roteiro de teste po
 Os testes adicionais cobrem configuração, projeção paralela, faixa, diagnóstico, replay/ramificação, persistência, CSV, intervenções combinadas durante 720 min e conservação com capacidades alternativas.
 
 Arquivos centrais: shipping.ts (motor); parameters.ts (validação); timeline.ts (replay); persistence.ts; diagnostics.ts; comparison.ts; ShippingDashboard.tsx; SettingsPanel.tsx; TurnSummary.tsx; HelpDialog.tsx; TestSite.tsx; Scene.tsx; shipping.css; simulation.test.ts, dentro de src/.
+
+## Versão publicada
+
+Site de teste (acesso privado à conta proprietária): https://shopee-flow-360-teste.peppycrow2.chatgpt.site
+
+Código e histórico publicados no GitHub: https://github.com/Tx-nirvana/shopee-flow-360
+
+O site do Google Apps Script permanece apenas como acesso complementar de teste, sem troca de dados.
