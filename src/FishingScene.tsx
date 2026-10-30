@@ -1,9 +1,9 @@
 import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
-import { ContactShadows, Html, OrbitControls } from '@react-three/drei';
+import { Billboard, ContactShadows, OrbitControls } from '@react-three/drei';
 import type { FishingPoint } from './fishingPoints';
 import { FlowRackTable, FlowRackRollers } from './FlowRackTable';
-import { BoxGeometry, Group, InstancedMesh, MeshStandardMaterial, Object3D } from 'three';
+import { BoxGeometry, CanvasTexture, Group, InstancedMesh, MeshStandardMaterial, Object3D, SRGBColorSpace } from 'three';
 const geometry = new BoxGeometry(1, 1, 1);
 const materialCache = new Map<string, MeshStandardMaterial>();
 function material(color: string) {
@@ -24,6 +24,25 @@ function Box({ p, s, c }: {
     return <mesh position={p} scale={s} geometry={geometry} material={material(c)} castShadow receiveShadow dispose={null}/>;
 }
 const positions = [-32.5, -19.5, -6.5, 6.5, 19.5, 32.5];
+const badgeTextures = new Map<string, CanvasTexture>();
+function SceneBadge({ id, position, point = false, active = false }: { id: number; position: Vector; point?: boolean; active?: boolean }) {
+    const texture = useMemo(() => {
+        const key = `${point ? 'point' : 'table'}-${id}-${active}`;
+        if (badgeTextures.has(key)) return badgeTextures.get(key)!;
+        const canvas = document.createElement('canvas'); canvas.width = 128; canvas.height = 64;
+        const ctx = canvas.getContext('2d')!;
+        ctx.fillStyle = active ? '#efbd88' : '#1b2e3b'; ctx.fillRect(0, 0, 128, 64);
+        ctx.strokeStyle = '#f0cca4'; ctx.lineWidth = 4; ctx.strokeRect(2, 2, 124, 60);
+        ctx.fillStyle = active ? '#221b14' : '#ffe2c1'; ctx.font = '600 40px Segoe UI, sans-serif';
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(point ? String(id).padStart(2, '0') : `M${id}`, 64, 34);
+        const result = new CanvasTexture(canvas); result.colorSpace = SRGBColorSpace;
+        badgeTextures.set(key, result); return result;
+    }, [id, point, active]);
+    return <Billboard position={position}><mesh renderOrder={100}>
+        <planeGeometry args={[2.35, 1.15]} />
+        <meshBasicMaterial map={texture} depthTest={false} toneMapped={false} />
+    </mesh></Billboard>;
+}
 const Rollers = memo(function Rollers() {
     const ref = useRef<InstancedMesh>(null);
     useLayoutEffect(() => {
@@ -54,10 +73,11 @@ function Parcels({ animate }: {
         <Box p={[0, 0.38, 0]} s={[0.15, 0.025, 0.92]} c="#f1d6a5"/>
     </group>)}</group>;
 }
-function FitCamera({ top, detail, selected }: {
+function FitCamera({ top, detail, selected, resetKey }: {
     top: boolean;
     detail: boolean;
     selected: number;
+    resetKey: number;
 }) {
     const { camera, size, invalidate } = useThree();
     useEffect(() => {
@@ -75,7 +95,7 @@ function FitCamera({ top, detail, selected }: {
         camera.position.set(top ? 0 : 25 * factor, top ? overviewHeight : 43 * factor, top ? 1.1 : 53 * factor);
         camera.lookAt(0, 0, 1);
         invalidate();
-    }, [camera, size.width, size.height, top, detail, selected, invalidate]);
+    }, [camera, size.width, size.height, top, detail, selected, resetKey, invalidate]);
     return null;
 }
 function Layout({ points, selected, onSelect, animate, detail }: {
@@ -106,22 +126,23 @@ function Layout({ points, selected, onSelect, animate, detail }: {
                     const tx = x + ((index % 3) - 1) * 3.25, tz = 3.4 + Math.floor(index / 3) * 3.1;
                     return <group key={table.id}>
                         <FlowRackTable x={tx} z={tz} />
-                        {!detail && <Html position={[tx, 1.3, tz - 0.5]} center distanceFactor={28}><span className="fish-table-marker" aria-label={`Ponto ${id}, mesa ${table.id}: ${table.destination}`} title={table.destination}>M{table.id}</span></Html>}
+                        {!detail && <SceneBadge id={table.id} position={[tx, 1.5, tz - 0.5]} />}
                     </group>;
                 })}
-                {!detail && <Html position={[x, 0.3, 8.1]} center distanceFactor={36}><button className={`fish-scene-number ${active ? 'selected' : ''}`} onClick={() => onSelect(id)} aria-label={`Selecionar ponto de pesca ${id}`} aria-pressed={active}>{String(id).padStart(2, '0')}</button></Html>}
+                {!detail && <SceneBadge id={id} position={[x, 0.3, 8.1]} point active={active} />}
             </group>;
         })}
         <ContactShadows position={[0, 0.01, 1]} opacity={0.35} scale={80} blur={2.2} far={16} frames={1}/>
     </>;
 }
-export default memo(function FishingScene({ points, selected, onSelect, animate, top, detail }: {
+export default memo(function FishingScene({ points, selected, onSelect, animate, top, detail, resetKey }: {
     points: FishingPoint[];
     selected: number;
     onSelect: (id: number) => void;
     animate: boolean;
     top: boolean;
     detail: boolean;
+    resetKey: number;
 }) {
     const [reduced, setReduced] = useState(() => matchMedia('(prefers-reduced-motion: reduce)').matches);
     useEffect(() => { const media = matchMedia('(prefers-reduced-motion: reduce)'), update = () => setReduced(media.matches); media.addEventListener('change', update); return () => media.removeEventListener('change', update); }, []);
@@ -132,7 +153,7 @@ export default memo(function FishingScene({ points, selected, onSelect, animate,
         <color attach="background" args={['#19252e']}/>
         <ambientLight intensity={1.8}/><hemisphereLight args={['#e2efff', '#38434b', 1.4]}/>
         <directionalLight position={[-20, 35, 20]} intensity={3} castShadow shadow-mapSize={[1024, 1024]} shadow-camera-left={-40} shadow-camera-right={40} shadow-camera-top={30} shadow-camera-bottom={-25}/>
-        <FitCamera top={top} detail={detailMode} selected={selected}/><Layout points={points} selected={selected} onSelect={onSelect} animate={moving} detail={detailMode}/>
+        <FitCamera top={top} detail={detailMode} selected={selected} resetKey={resetKey}/><Layout points={points} selected={selected} onSelect={onSelect} animate={moving} detail={detailMode}/>
         <OrbitControls makeDefault target={target} minDistance={detailMode ? 2.4 : 35} maxDistance={detailMode ? 14 : 160} maxPolarAngle={Math.PI / 2.2}/>
     </Canvas>;
 });
