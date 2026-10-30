@@ -1,16 +1,18 @@
+import { defaultConfig, cloneConfig, validateConfig, type SimulationConfig } from './parameters'
 export type Status = 'Carregando' | 'Aguardando' | 'Liberada' | 'Atrasada' | 'Pronta'
 export type Scenario = 'base' | 'optimized' | 'peak'
 export type Dock = { id:number; route:string; truck:string; progress:number; status:Status; loaded:number; capacity:number; inbound:number; pending:number; staged:number; planned:number; departedAt:number|null }
 export type Transfer = { id:number; dockId:number; volumes:number; started:number; arrives:number }
 export type SimEvent = { id:number; time:number; title:string; detail:string; kind:'success'|'warning'|'info' }
-export type Simulation = { seconds:number; docks:Dock[]; shipped:number; departures:number; events:SimEvent[]; incidentUntil:number; counterUntil:number; transfers:Transfer[]; checked:number; priority:number|null; nextId:number }
+export type Simulation = { config:SimulationConfig; seconds:number; docks:Dock[]; shipped:number; departures:number; events:SimEvent[]; incidentUntil:number; counterUntil:number; transfers:Transfer[]; checked:number; priority:number|null; nextId:number }
 export const routes=['São Paulo · SP','Campinas · SP','Curitiba · PR','Rio de Janeiro · RJ','Belo Horizonte · MG','Sorocaba · SP','Ribeirão Preto · SP','Santos · SP']
 export const settings={base:{label:'Operação atual',rate:0.65,checking:36},optimized:{label:'Fluxo otimizado',rate:0.65,checking:56},peak:{label:'Balcão sobrecarregado',rate:0.65,checking:18}}
 export const TURN_MINUTES=720
 export const clock=(minutes:number)=>`${String((8+Math.floor(minutes/60))%24).padStart(2,'0')}:${String(minutes%60).padStart(2,'0')}`
-export function initialState():Simulation{
+export function initialState(config:SimulationConfig=defaultConfig()):Simulation{
+ const errors=validateConfig(config);if(errors.length)throw new Error(errors.join(" "));
  const loads=[544,336,728,184,0,448,120,0],staged=[160,240,12,200,80,160,120,80];
- return {seconds:0,shipped:0,departures:0,incidentUntil:0,counterUntil:0,checked:0,priority:null,nextId:1,transfers:[],events:[{id:0,time:0,title:'Shipping Diário iniciado',detail:'Esteira → balcão → ruas (stage out) → caminhões → expedidos · 6.400 volumes fictícios',kind:'info'}],docks:routes.map((route,i)=>({id:i+1,route,truck:`SHP-${2401+i*17}`,progress:loads[i]/8,status:loads[i]?'Carregando':'Aguardando',loaded:loads[i],capacity:800,inbound:Math.max(0,800-loads[i]-staged[i]-80),pending:Math.min(80,800-loads[i]-staged[i]),staged:staged[i],planned:[460,480,400,440,510,485,450,540][i],departedAt:null}))}
+ return {config:cloneConfig(config),seconds:0,shipped:0,departures:0,incidentUntil:0,counterUntil:0,checked:0,priority:null,nextId:1,transfers:[],events:[{id:0,time:0,title:'Shipping Diário iniciado',detail:'Esteira → balcão → ruas (stage out) → caminhões → expedidos · volumes fictícios',kind:'info'}],docks:routes.map((route,i)=>({id:i+1,route,truck:`SHP-${2401+i*17}`,progress:Math.floor(loads[i]*config.capacities[i]/800)/config.capacities[i]*100,status:loads[i]?'Carregando':'Aguardando',loaded:Math.floor(loads[i]*config.capacities[i]/800),capacity:config.capacities[i],inbound:Math.max(0,config.capacities[i]-Math.floor(loads[i]*config.capacities[i]/800)-Math.floor(staged[i]*config.capacities[i]/800)-Math.floor(80*config.capacities[i]/800)),pending:Math.min(Math.floor(80*config.capacities[i]/800),config.capacities[i]-Math.floor(loads[i]*config.capacities[i]/800)-Math.floor(staged[i]*config.capacities[i]/800)),staged:Math.floor(staged[i]*config.capacities[i]/800),planned:config.planned[i],departedAt:null}))}
 }
 function event(s:Simulation,title:string,detail:string,kind:SimEvent['kind']='info'){s.events=[{id:s.nextId++,time:s.seconds,title,detail,kind},...s.events].slice(0,40)}
 function copy(s:Simulation):Simulation{return {...s,docks:s.docks.map(d=>({...d})),transfers:s.transfers.map(t=>({...t})),events:[...s.events]}}
@@ -23,9 +25,9 @@ export function forecast(s:Simulation,d:Dock,scenario:Scenario):number{
  if(d.departedAt!==null)return d.departedAt;
  const order=[...s.docks].sort((a,b)=>Number(b.id===s.priority)-Number(a.id===s.priority)||a.planned-b.planned);
  const ahead=order.slice(0,order.findIndex(x=>x.id===d.id)).reduce((n,x)=>n+x.pending+x.inbound,0);
- const counter=d.pending+d.inbound>0?Math.max(0,s.counterUntil-s.seconds)+Math.max(Math.ceil(d.inbound/8),Math.ceil((ahead+d.pending+d.inbound)/settings[scenario].checking))+4:0;
+ const counter=d.pending+d.inbound>0?Math.max(0,s.counterUntil-s.seconds)+Math.max(Math.ceil(d.inbound/8),Math.ceil((ahead+d.pending+d.inbound)/(s.config.checking??settings[scenario].checking)))+s.config.transferMinutes:0;
  const moving=Math.max(0,...s.transfers.filter(t=>t.dockId===d.id).map(t=>t.arrives-s.seconds));
- const load=Math.ceil((d.capacity-d.loaded)/Math.max(1,Math.floor(settings[scenario].rate*8*(0.86+d.id*0.035))));
+ const load=Math.ceil((d.capacity-d.loaded)/Math.max(1,s.config.dockRates[d.id-1]));
  const retention=d.id===4?Math.max(0,s.incidentUntil-s.seconds):0;
  // Conservative estimate: check and transport may overlap loading in the actual simulation.
  return Math.max(d.planned,s.seconds+Math.max(counter,moving,retention)+load);
@@ -38,13 +40,13 @@ export function tick(s:Simulation,scenario:Scenario):Simulation{
  next.transfers=next.transfers.filter(t=>t.arrives>now);
  // The rear conveyor supplies each counter position before checking starts.
  for(const d of next.docks){const received=Math.min(8,d.inbound);d.inbound-=received;d.pending+=received}
- let budget=now<next.counterUntil?0:settings[scenario].checking;
+ let budget=now<next.counterUntil?0:(next.config.checking??settings[scenario].checking);
  const ordered=[...next.docks].sort((a,b)=>Number(b.id===next.priority)-Number(a.id===next.priority)||a.planned-b.planned);
- for(const d of ordered){const count=Math.min(budget,d.pending);if(count<=0)continue;d.pending-=count;budget-=count;next.checked+=count;next.transfers.push({id:next.nextId++,dockId:d.id,volumes:count,started:now,arrives:now+4});if(d.pending+d.inbound===0){event(next,`Balcão concluiu ${d.route.split(' · ')[0]}`,`Rua ${String(d.id).padStart(2,'0')} · últimos volumes a caminho do stage out`,'success');if(next.priority===d.id)next.priority=null}}
+ for(const d of ordered){const count=Math.min(budget,d.pending);if(count<=0)continue;d.pending-=count;budget-=count;next.checked+=count;next.transfers.push({id:next.nextId++,dockId:d.id,volumes:count,started:now,arrives:now+next.config.transferMinutes});if(d.pending+d.inbound===0){event(next,`Balcão concluiu ${d.route.split(' · ')[0]}`,`Rua ${String(d.id).padStart(2,'0')} · últimos volumes a caminho do stage out`,'success');if(next.priority===d.id)next.priority=null}}
  for(const d of next.docks){
   if(d.departedAt!==null)continue;
   if(d.id===4&&now<next.incidentUntil){d.status='Atrasada'}else{
-   const amount=Math.min(d.staged,d.capacity-d.loaded,Math.max(1,Math.floor(settings[scenario].rate*8*(0.86+d.id*0.035))));
+   const amount=Math.min(d.staged,d.capacity-d.loaded,Math.max(1,s.config.dockRates[d.id-1]));
    d.staged-=amount;d.loaded+=amount;d.progress=d.loaded/d.capacity*100;
    d.status=d.loaded===d.capacity?'Pronta':amount>0?'Carregando':'Aguardando';
    if(d.loaded===d.capacity&&now>=d.planned){d.status='Liberada';d.departedAt=now;next.shipped+=d.capacity;next.departures++;event(next,`Doca ${String(d.id).padStart(2,'0')} · caminhão expedido`,`${d.route} · ${d.capacity} volumes · ${now>d.planned?'saída atrasada':'saída no prazo'}`,now>d.planned?'warning':'success')}
@@ -53,4 +55,4 @@ export function tick(s:Simulation,scenario:Scenario):Simulation{
  }
  return next;
 }
-export function project(scenario:Scenario,minutes=TURN_MINUTES){let s=initialState();for(let i=0;i<minutes;i++)s=tick(s,scenario);return {volumes:s.shipped,departures:s.departures,onTime:summary(s).onTime,pending:summary(s).pending}}
+export function project(scenario:Scenario,minutes=TURN_MINUTES,config:SimulationConfig=defaultConfig()){let s=initialState(config);for(let i=0;i<minutes;i++)s=tick(s,scenario);return {volumes:s.shipped,departures:s.departures,onTime:summary(s).onTime,pending:summary(s).pending}}

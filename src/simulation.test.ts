@@ -1,3 +1,4 @@
+import { defaultConfig, validateConfig } from './parameters'
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { addIncident, clock, forecast, holdCounter, initialState, inTransit, prioritize, project, settings, shippingStatus, summary, tick, type Scenario } from './shipping'
@@ -66,3 +67,6 @@ test('prioridade permanece ativa enquanto ainda há volumes do destino na esteir
 test("turno termina às 20h sem descartar volumes pendentes",()=>{const s=initialState();s.seconds=720;assert.equal(tick(s,"base"),s);assert.equal(clock(s.seconds),"20:00")})
 
 test("cenários isolam a capacidade do balcão",()=>{assert.equal(settings.base.rate,settings.optimized.rate);assert.equal(settings.base.rate,settings.peak.rate);const s=initialState();const a=tick(s,"base"),b=tick(s,"optimized");assert.equal(a.docks[0].loaded,b.docks[0].loaded);assert.equal(a.checked,36);assert.equal(b.checked,56)})
+
+test("configuração valida limites e mantém total proporcional",()=>{const c=defaultConfig();c.capacities=[1,200,400,600,800,1000,1200,1600];c.checking=80;c.transferMinutes=7;c.dockRates.fill(12);assert.deepEqual(validateConfig(c),[]);let s=initialState(c);for(let i=0;i<720;i++){s=tick(s,"base");const t=summary(s);assert.equal(t.inbound+t.pending+t.transit+t.staged+t.loaded+s.shipped,c.capacities.reduce((a,b)=>a+b,0))}assert.equal(s.departures,8);c.capacities[0]=0;assert.throws(()=>initialState(c))})
+test("balcão e docas podem ser configurados de forma independente",()=>{const c=defaultConfig();c.checking=12;c.dockRates.fill(2);c.transferMinutes=9;const s=initialState(c),a=tick(s,"base"),b=tick(s,"optimized");assert.equal(a.checked,12);assert.equal(b.checked,12);assert.equal(a.docks[0].loaded-s.docks[0].loaded,2);assert.equal(a.transfers[0].arrives-a.transfers[0].started,9);assert.equal(s.config.checking,12);c.dockRates[0]=100;assert.equal(s.config.dockRates[0],2)})
