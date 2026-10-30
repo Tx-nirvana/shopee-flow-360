@@ -1,81 +1,76 @@
-# SHOPEE FLOW 360 · Shipping Diário
+# Shopee Flow 360 · Shipping Diário
 
-Centro de comando demonstrativo para acompanhar o plano de saídas e o caminho da carga: **esteira → balcão → ruas (stage out) → caminhões → expedidos**. Identidade grafite/laranja, cenário 3D em corte, programação de saídas, alertas, previsto versus realizado e modo apresentação.
+Simulador ilustrativo de expedição em React, TypeScript, React Three Fiber e Vite. Todos os dados são fictícios; nenhum sistema interno da Shopee está conectado.
 
-Todos os dados são fictícios. Nenhum sistema ou documento interno foi conectado. O código está no GitHub; não há site hospedado ou backend. O estado reinicia ao recarregar.
+## Executar
 
-## Abrir no PC
+Requer Node.js 22.12+ ou 24 e npm. Na pasta do projeto:
 
-Neste PC, as dependências já estão instaladas. Dê dois cliques em `INICIAR.cmd`, mantenha a janela aberta e acesse a URL exibida, normalmente http://127.0.0.1:5173. Encerre com Ctrl+C.
-
-Em outro computador, instale Node.js 22.12+ ou 24, baixe o repositório, abra um terminal na pasta e execute:
-
-```powershell
+~~~powershell
 npm ci
 npm run dev
-```
+~~~
 
-O servidor atende apenas o próprio computador. Para validar e gerar uma versão compilada:
+Abra a URL local exibida no terminal. Nesta cópia as dependências já estão instaladas: também é possível abrir INICIAR.cmd. O servidor atende somente o próprio computador. Para encerrar, use Ctrl+C.
 
-```powershell
+~~~powershell
 npm test
 npm run build
 npm run preview
-```
+~~~
 
-O build fica em `dist/` e deve ser aberto por um servidor, não clicando diretamente no HTML. O arquivo `package-lock.json` fixa as versões das dependências.
+O build está em dist/; abra por um servidor HTTP. Não abra dist/index.html diretamente pelo explorador.
 
-## Roteiro de apresentação
+## Operação e parâmetros
 
-1. Comece às 14h e mostre o plano de oito saídas, totalizando 6.400 volumes. A data 29/10/2026 identifica o dia demonstrativo, não dados reais de hoje.
-2. Selecione Campinas na linha das próximas saídas. A rua 02 do stage out e a rota até a doca 02, a carga na lateral e a linha da tabela correspondem ao mesmo destino. Também é possível selecionar pelo 3D, pelos alertas ou pela tabela.
-3. Acompanhe as cinco etapas: esteira, balcão, ruas, caminhões e expedidos. O indicador de ruas inclui lotes em transferência do balcão e os já separados no chão. Os volumes nos caminhões excluem cargas já expedidas; a soma das etapas sempre totaliza 6.400 volumes.
-4. Use **Priorizar no balcão** para atender o destino selecionado antes da ordem normal. A prioridade não aumenta a capacidade nem cria novos volumes.
-5. Use **Reter balcão por 20 min**. A conferência para, mas as docas continuam consumindo os volumes já separados. Use **Reter doca 04 por 60 min** para simular uma retenção no carregamento.
-6. Acelere até 10×. Um caminhão pronto aguarda seu horário; um caminhão incompleto permanece até concluir a carga e registra o atraso.
-7. Compare os três cenários em uma janela de 180 min, usando o mesmo plano e estoque inicial. Aplicar um cenário reinicia o turno e remove intervenções anteriores.
-8. Ative **Modo apresentação**. Esc sai; Espaço pausa quando o foco está no corpo da página. F11 pode ser usado manualmente para tela cheia do navegador.
+- Turno das **08h às 20h**, com limite de 720 minutos simulados. O plano também pode terminar antes quando os oito caminhões saem. O controle de tempo permite consultar o fim do turno.
+- Oito caminhões de 800 volumes por padrão: 6.400 volumes, distribuídos inicialmente entre esteira, balcão, ruas e caminhões. Não há reposição de caminhões neste turno.
+- Fluxo: esteira → balcão → transferência → rua → caminhão → expedidos. A transferência padrão leva 4 min; a esteira fornece até 8 volumes por destino por minuto.
+- Horários absolutos fictícios preservados: São Paulo 15h40; Campinas 16h00; Curitiba 14h40; Rio 15h20; Belo Horizonte 16h30; Sorocaba 16h05; Ribeirão Preto 15h30; Santos 17h00.
+- Cenários alteram **somente o balcão**: Operação atual 36 vol/min; Fluxo otimizado 56; Balcão sobrecarregado 18. As velocidades das docas são iguais entre cenários, com valores padrão de 4, 4, 5, 5, 5, 5, 5 e 5 vol/min.
+- Na aba **Parâmetros**, edite balcão, tempo de transferência, capacidade e velocidade de cada doca e horário de cada saída. Aplicar reinicia o turno e limpa intervenções anteriores.
+- A opção de capacidade personalizada substitui a capacidade dos três cenários. Desmarque-a para voltar a comparar 36/56/18. Com os horários atuais e início às 08h, os três cenários podem entregar resultados idênticos: isso não comprova equivalência operacional em outros planos.
+- Volumes são inteiros. Balcão: 1–10.000 vol/min; doca: 1–2.000 vol/min; capacidade por caminhão: 1–100.000; transferência: 1–60 min; horários: 08h–20h. Capacidades menores/maiores redistribuem o estoque inicial proporcionalmente, com resto alocado antes da conferência.
+- A conservação passa a usar o total configurado; 6.400 continua sendo a referência da configuração padrão.
 
-## Regras do modelo
+## Previsão e diagnóstico
 
-- Oito caminhões, cada um com uma carga de 800 volumes e um destino fixo. Não há reposição de caminhões após a saída neste turno.
-- Horários previstos, por doca: 15h40, 16h, 14h40, 15h20, 16h30, 16h05, 15h30 e 17h.
-- O estoque inicial de cada destino é distribuído entre esteira, balcão, ruas do stage out e caminhão. Os totais por etapa são mutuamente exclusivos.
-- 1 segundo real equivale a 1 minuto simulado em 1×. O relógio para ao concluir as oito saídas.
-- A esteira fica atrás do balcão e o abastece com até 8 volumes por destino por minuto. Na frente, oito ruas são delimitadas com pintura no piso, sem esteiras; cada rua atende o caminhão da doca de mesmo número. Durante uma retenção de balcão, os volumes da esteira continuam chegando e aguardam conferência.
-- O balcão atende os destinos por horário previsto, exceto uma prioridade manual ativa. Confere até 36 volumes/min no cenário atual, 56 no otimizado e 18 no sobrecarregado.
-- Um lote conferido leva 4 minutos simulados para chegar à rua de stage out. As caixas em movimento são representações de lotes; uma caixa 3D não equivale a um volume individual.
-- Cada doca carrega até `floor(taxa × 8 × (0,86 + doca × 0,035))` volumes/min, limitada ao estoque separado. Taxas: 0,65, 0,94 e 0,55 nos três cenários.
-- A saída exige carga completa, horário previsto atingido e ausência de retenção ativa. Saídas atrasadas são registradas uma única vez. O realizado é o horário efetivo de partida.
-- A estimativa conservadora soma espera de conferência/transporte e carregamento, respeitando o horário previsto e retenções. Como etapas reais da simulação se sobrepõem, ela pode sinalizar risco que se resolve antes do corte. Não é uma previsão validada.
-- Pontualidade mostra a porcentagem das saídas já realizadas que cumpriram o horário. Antes da primeira saída, é exibido “—”.
-- O histórico mantém os últimos 40 eventos. Prioridades, conferências concluídas, cortes perdidos e saídas geram registros.
+A projeção provável continua o estado atual usando o mesmo motor e as mesmas etapas em paralelo. Ela considera prioridades e retenções já ativas, sem novas intervenções futuras. A faixa otimista usa +20% de capacidade de conferência e carregamento; a pessimista usa −20%, com arredondamento inteiro e mínimo de 1 vol/min. Não é intervalo estatístico, previsão validada ou promessa de prazo.
 
-## Verificação
+Projeções podem ultrapassar as 20h; a operação principal para no limite do turno. O horizonte de projeção é de até sete dias após o maior horário previsto ou o instante atual. “Fora do horizonte” informa que não se encontrou conclusão nesse limite, sem afirmar que a carga nunca terminará. Os horários são de relógio e podem virar o dia em configurações extremas.
 
-Em 29/10/2026: **14 testes automatizados aprovados**, TypeScript e build Vite concluídos, servidor local respondendo HTTP 200. A verificação cobre conservação de volumes em todos os cenários durante 600 min, alimentação da esteira ao balcão, transporte às ruas, retenções, prioridade contínua enquanto há volumes na esteira, bloqueio sem estoque, horários, partidas únicas, imutabilidade e comparação determinística.
+O gargalo ao vivo indica pressão estimada pelo estoque dividido pela capacidade, com prioridade para retenções ativas. Não usa somente a maior quantidade de caixas. As ruas incluem volumes em transferência no indicador geral, mas o detalhe da carga separa transferência e estoque no piso.
 
-Resultados demonstrativos até 17h, sem intervenções manuais:
+O resumo lista cargas atrasadas e pendentes, etapa dominante nos minutos de atraso e evidências por carga: espera pela esteira, fila/retenção do balcão, transferência, carregamento e retenção da doca. Cada minuto após o corte é associado a uma etapa limitante observada. É uma explicação do modelo, sem inferência de causalidade exclusiva.
 
-| Cenário | Volumes expedidos | Caminhões expedidos | Saídas no prazo |
-| --- | ---: | ---: | ---: |
-| Operação atual | 4.800 | 6 | 4 |
-| Fluxo otimizado | 6.400 | 8 | 7 |
-| Balcão sobrecarregado | 4.800 | 6 | 2 |
+## Tempo, intervenções e persistência
 
-A ferramenta de navegador está bloqueando a observação da página local; a aparência, interações no navegador e renderização WebGL desta versão precisam de conferência manual antes da apresentação. Use um navegador com aceleração de hardware. Sem 3D, os painéis e a tabela continuam oferecendo os dados e controles.
+- Iniciar/pausar; velocidades 1×, 2×, 5× e 10×. Em 1×, um segundo real equivale a um minuto simulado.
+- Voltar/avançar 10 min ou usar o controle deslizante. Home/End levam ao início/fim do turno pelo teclado.
+- Priorizar no balcão muda a ordem sem aumentar capacidade. Reter balcão pausa conferência por 20 min; a esteira continua chegando e docas consomem estoque disponível. Reter doca 04 suspende carregamento e saída por 60 min.
+- Ao voltar e aplicar uma intervenção, as intervenções futuras são substituídas. Sem novas intervenções, avançar reproduz o histórico existente.
+- O localStorage guarda configuração, relógio, cenário, velocidade e diário completo de intervenções em formato versionado. O estado é reconstruído por replay determinístico, sem depender do histórico visual limitado a 40 eventos.
+- Recarregar restaura a sessão **pausada**. Armazenamento bloqueado ou inválido gera aviso e recuperação segura. O progresso é local à origem/navegador, sem backup remoto ou sincronização entre dispositivos.
+- Reiniciar mantém parâmetros e cenário. Restaurar parâmetros padrão recupera a configuração original.
 
-## Arquivos principais
+## Comparação e exportação
 
-- `src/ShippingDashboard.tsx`: programação, indicadores, comparação, inspeção e controles.
-- `src/shipping.ts`: regras puras de fluxo, estoque, cortes, prioridade e projeções.
-- `src/Scene.tsx`: esteira traseira, balcão, ruas demarcadas, lotes, docas e caminhões.
-- `src/shipping.css`: identidade visual e layouts responsivos do Shipping Diário.
-- `src/simulation.test.ts`: testes do modelo integrado.
-- `src/App.tsx` e `src/simulation.ts`: pontos de entrada para o painel e o modelo.
+Na aba Comparar cenários, os três resultados usam a mesma configuração, janela de 720 min e estado inicial, sem intervenções manuais da sessão. O CSV inclui hipóteses, parâmetros, volumes expedidos/pendentes, caminhões, pontualidade e minutos de atraso. Use **Exportar comparação CSV**. O arquivo usa UTF-8 com BOM, separador ponto e vírgula, aspas e finais de linha compatíveis com planilhas.
 
-Próximas etapas: validar horários e regras com os responsáveis; conferir legibilidade e desempenho no equipamento de apresentação; definir dados, permissões e critérios de segurança antes de qualquer integração real ou publicação do site.
+## Site complementar de teste
 
+O cartão **Shipping Laranja · Plano Diário** abre em outra aba o Google Apps Script indicado pelo usuário. Foi verificada a tela de login. A autenticação pertence ao próprio site; este projeto não armazena credenciais nem importa, envia ou sincroniza dados com ele. A fonte e o deploy do Apps Script não foram modificados. Não há incorporação por iframe nem integração operacional nesta entrega.
 
-## Evolução do turno
-O turno agora vai das 08h às 20h; horários absolutos fictícios preservados. A comparação de 720 min pode empatar entre cenários. Os testes de comparação aceitam igualdade intencionalmente; casos de corte mantêm prazos curtos explícitos para exercitar atraso. `seconds` mantém o nome por compatibilidade, mas representa minutos simulados.
+## Acessibilidade e 3D
+
+Há acesso por teclado, rótulos, estados selecionados, progresso semântico, cabeçalho de tabela, link para pular conteúdo e diálogo nativo com foco contido e devolvido ao botão de origem. O celular mantém a tabela com rolagem própria. O botão **Usar painel 2D** permite operar sem cena; erros de carregamento/WebGL também têm fallback.
+
+O 3D respeita movimento reduzido, renderiza sob demanda quando pausado e compartilha geometria/materiais. Roletes, lâminas das portas e detalhes dos caminhões usam instâncias: 235 elementos repetidos ficam em 10 malhas instanciadas. O JavaScript do 3D é carregado separadamente. Não foi realizado benchmark comparativo de FPS no equipamento de apresentação.
+
+## Verificação e guia de alterações
+
+Consulte **ENTREGA.md** para o que mudou, motivo, arquivos e roteiro de teste por melhoria. Os testes originais foram preservados; expectativas de horário e comparação foram atualizadas intencionalmente porque o turno e os cenários mudaram. Casos de prazo curto continuam explícitos para exercitar atrasos.
+
+Os testes adicionais cobrem configuração, projeção paralela, faixa, diagnóstico, replay/ramificação, persistência, CSV, intervenções combinadas durante 720 min e conservação com capacidades alternativas.
+
+Arquivos centrais: shipping.ts (motor); parameters.ts (validação); timeline.ts (replay); persistence.ts; diagnostics.ts; comparison.ts; ShippingDashboard.tsx; SettingsPanel.tsx; TurnSummary.tsx; HelpDialog.tsx; TestSite.tsx; Scene.tsx; shipping.css; simulation.test.ts, dentro de src/.
